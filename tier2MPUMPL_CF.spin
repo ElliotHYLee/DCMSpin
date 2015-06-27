@@ -5,7 +5,7 @@ CON
 PERCENT_CONST = 1000
 
 OBJ
-  sensor    : "Tier1MPUMPL.spin"
+  sensor    : "Tier1MPUMPL_Raw.spin"
   FDS    : "FullDuplexSerial.spin"
   math   : "MyMath.spin"  'no cog
 Var
@@ -126,13 +126,17 @@ Complementary Filter for 2000 deg/s and 4g
   gyroIntegral[0] := gyroIntegral[0] - (gyro[1]*27/100)
   compFilter[0] := (a*(compFilter[0] - (gyro[1]*27/100))+500)/PERCENT_CONST + ((PERCENT_CONST-a)*avgAcc[0]+500)/PERCENT_CONST
  
-  
   gyroIntegral[1] := gyroIntegral[1] + (gyro[0]*26/100)  
   compFilter[1] := (a*(compFilter[1] + (gyro[0]*26/100))+500)/PERCENT_CONST + ((PERCENT_CONST-a)*avgAcc[1]+500)/PERCENT_CONST
 
   tempX := (compFilter[0] * compFilter[0])/100
   tempY := (compFilter[1] * compFilter[1])/100
-  tempTot := 680000 - tempX - tempY
+  tempTot := 640000 - tempX - TempY
+  'tempX := (compFilter[0] * compFilter[0])/10000
+  'tempY := (compFilter[1] * compFilter[1])/10000
+  'tempTot := (avgAcc[0]/100)*(avgAcc[0]/100) - tempX
+  'tempTot := tempTot + (avgAcc[3]/100)*(avgAcc[3]/100)
+  'tempTot := tempTot + (avgAcc[1]/100)*(avgAcc[1]/100) - tempY
   compFilter[2] := 10*math.sqrt(tempTot)
 
 '  compFilter[2] := acc[2]
@@ -207,7 +211,7 @@ PUB getHeading(headingPtr)| i
 PUB getTemperautre(dataPtr)
   Long[dataPtr] := temperature
         
-PUB getEulerAngle(eAnglePtr)
+PUB getCompFilter(eAnglePtr)
 
   Long[eAnglePtr][0] := compFilter[0]
   Long[eAnglePtr][1] := compFilter[1]
