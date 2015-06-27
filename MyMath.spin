@@ -24,7 +24,45 @@ PUB sqrt(value)| x, i
 
   return x
 
+PUB skew(Dptr, a, b, c, k, dt) | i
+ 'long[Dptr][0] += 0
 
+  long[Dptr][1] += a*k*dt
+  'long[Dptr][1] := long[Dptr][1]*k/dt
+
+  long[Dptr][2] += b*k*dt
+  'long[Dptr][2] := long[Dptr][2]*k/dt
+
+
+  long[Dptr][3] += -a*k*dt
+  'long[Dptr][3] := long[Dptr][3]*k/dt
+ 'long[Dptr][4] += 0
+  long[Dptr][5] += c*k*dt
+  'long[Dptr][5] := long[Dptr][5]*k/dt
+
+
+  long[Dptr][6] += -b*k*dt
+  'long[Dptr][6] := long[Dptr][6]*k/dt  
+  long[Dptr][7] += -c*k*dt
+  'long[Dptr][7] := long[Dptr][7]*k/dt  
+ 'long[Dptr][8] += 0
+
+
+
+PUB getIdentityMatrix(E) { 10^5 = unity to represent 1.xxxxx}
+
+  long[E][0] := 10_0000
+  long[E][1] := 0
+  long[E][2] := 0
+
+  long[E][3] := 0
+  long[E][4] := 10_0000
+  long[E][5] := 0
+
+  long[E][6] := 0
+  long[E][7] := 0
+  long[E][8] := 10_0000  
+  
 PUB getSign(value)
 
   if value >= 0

@@ -1,16 +1,19 @@
-
+clc, clear
 
 out = instrfindall
 
-% s1=serial('COM3','Baudrate',115200);
-% fopen(s1);
-% accX=0;accY=0;accZ=0;
-% str='';
-% sen=0;
-% j=1;
-% x=0;
+s1=serial('COM3','Baudrate',115200);
+fclose(s1);
+delete(s1);
 
-r =100000000;
+s1=serial('COM3','Baudrate',115200);
+fopen(s1);
+accX=0;accY=0;accZ=0;
+str='';
+sen=0;
+j=1;
+x=0;
+
 while(j<1000)
     
     str=fscanf(s1);
