@@ -247,7 +247,6 @@ PUB magY
 PUB magZ
   return mag[2]  
 
-
 PRI printMagInfo| i, j
 
   fds.strLn(String("Euler Angle"))
@@ -266,7 +265,7 @@ PRI printMagInfo| i, j
   fds.str(String(" Z: "))
   fds.decLn(avgMag[2])
   fds.newline
-  fds.str(string("magnitude of magnetometer: "))
+  fds.str(string("magnitude^2 of magnetometer: "))
   fds.decLn(avgMag[0]*avgMag[0] + avgMag[1]*avgMag[1] + avgMag[2]*avgMag[2])
 
   fds.newline  
