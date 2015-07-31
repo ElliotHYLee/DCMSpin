@@ -5,29 +5,32 @@ CON
 PERCENT_CONST = 1000
 
 OBJ
-  sensor    : "Tier2MPUMPL_CF.spin"
+  sensor    : "Tier2MPUMPL_Refinery.spin"
   FDS    : "FullDuplexSerial.spin"
   math   : "MyMath.spin"  'no cog
 Var
-  long compFilter[3], gyro[3], mag[3]
+  long acc[3], gyro[3], mag[3], temperature, gForce
   long playID, runStack[128]
-  long gyroNorm, D[9], DCM[9], E[9], omega[3] 
+  long gyroNorm, D[9], DCM[9], E[9], omega[3]
+  long elapse, prev
 
 PUB main
 
   FDS.quickStart  
   
   initSensor(15,14)
-  setMpu(%000_11_000, %000_01_000) '2000 deg/s, 4g
+  setMpu(%000_00_000, %000_00_000) '250 deg/s, 2g
   startPlay
 
   repeat
     FDS.clear
     fds.newline
-    printBasicInfo
+    printAll
 
     'sendToMatlab
     fds.newline
+    fds.dec(elapse*1000000/clkfreq)
+    fds.strLn(string(" micro sec ==> limit = 20000 ms (50Hz)"))
     waitcnt(cnt+clkfreq/10)
 
 PUB initSensor(scl, sda)
@@ -41,22 +44,29 @@ PUB stopPlay
     cogstop(playID ~ -1)
     
 PUB startPlay
- stopPlay
- playID := cognew(playSensor, @runStack) + 1
+  stopPlay
+  playID := cognew(playSensor, @runStack) + 1
  
 PUB playSensor
 
   math.getIdentityMatrix(@D)  
   repeat
+    prev := cnt
     run
-    calcDCM
+    'calcDCM
+    elapse := cnt - prev
 
 PUB run {put this function into a loop for autopilot}
-    sensor.run 
-    sensor.getCompFilter(@compFilter)
-    sensor.getGyro(@gyro)
-    sensor.getHeading(@mag)
-    calcDCM
+  sensor.run 
+  sensor.getAcc(@acc)
+  sensor.getGyro(@gyro)
+  sensor.getHeading(@mag)
+  sensor.getTemp(@temperature)
+  getGFroce
+
+PUB getGFroce
+
+  gForce := (math.sqrt(acc[0]*acc[0] + acc[1]*acc[1] + acc[2]*acc[2])* 100 + 8192 )/ 16384 
 
 
 PUB  calcDCM | dt{updates eAngle}
@@ -71,7 +81,38 @@ PUB  calcDCM | dt{updates eAngle}
 
 
   copyDCM 
-   
+
+
+PRI printAll | i, j
+  repeat i from 0 to 2
+    repeat j from 0 to 2
+      if i==0
+        FDS.str(String("Acc["))
+        FDS.dec(j)
+        FDS.str(String("]=  "))      
+        FDS.decLn(acc[j])
+        
+        
+      if i==1
+        FDS.str(String("Gyro["))
+        FDS.dec(j)
+        FDS.str(String("]= "))      
+        FDS.decLn(gyro[j])
+
+        
+      if i ==2
+        FDS.str(String("Mag["))
+        FDS.dec(j)
+        FDS.str(String("]= "))      
+        FDS.decLn(mag[j])
+
+        
+    'fds.decLn(mag[0]*mag[0] + mag[1]*mag[1] + mag[2]*mag[2])
+  FDS.Str(String("Tempearture = "))
+  FDS.decLn(temperature)
+  FDS.Str(String("% gForce = "))
+  FDS.decLn(gForce)
+
 PRI getOmega
   '1_0000_0000 > gyroNormMax = 1200_0000, also no overflow should occur
   if ((gyroNorm > 0) OR (gyroNorm < 0)) 
@@ -85,22 +126,22 @@ PRI getOmega
 
 PRI sendToMatlab
 
-  fds.dec(compFilter[0])
+  fds.dec(acc[0])
   fds.str(String(" ")) 
-  fds.dec(compFilter[1]) 
+  fds.dec(acc[1]) 
   fds.str(String(" "))
-  fds.dec(compFilter[2])
+  fds.dec(acc[2])
   fds.str(String(" "))
 
 PRI printBasicInfo| i, j
 
-  fds.strLn(String("compFilter"))
+  fds.strLn(String("acc"))
   fds.str(String("X: "))
-  fds.dec(compFilter[0])
+  fds.dec(acc[0])
   fds.str(String(" Y: "))
-  fds.dec(compFilter[1])
+  fds.dec(acc[1])
   fds.str(String(" Z: "))
-  fds.decLn(compFilter[2])
+  fds.decLn(acc[2])
   fds.newline
   fds.strLn(String("gyro"))
   fds.str(String("X: "))
