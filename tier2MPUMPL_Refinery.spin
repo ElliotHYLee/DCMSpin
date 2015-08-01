@@ -40,7 +40,7 @@ PUB main
   base3 := base2
   flag := 1
   repeat
-    {
+{    
     if (flag ==1 AND(cnt > base1 + clkfreq/50))
       printAcc_GCS
       base1 := cnt
@@ -53,15 +53,15 @@ PUB main
       printMag_GCS
       base3 := cnt
       flag := 1
-    }
-    printAll_GCS  
+}
+   printAll_GCS
     waitcnt(cnt + clkfreq/50)
     
     'fds.newline  
         
       'printCompFilter
    
-    
+      'printAll
   '    printSomeX
    
   '    printSomeY
