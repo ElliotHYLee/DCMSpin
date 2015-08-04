@@ -46,9 +46,7 @@ PUB skew(Dptr, a, b, c, k, dt) | i
   long[Dptr][7] += -c*k*dt
   'long[Dptr][7] := long[Dptr][7]*k/dt  
  'long[Dptr][8] += 0
-
-
-
+                                
 PUB getIdentityMatrix(E) { 10^5 = unity to represent 1.xxxxx}
 
   long[E][0] := 10_0000
