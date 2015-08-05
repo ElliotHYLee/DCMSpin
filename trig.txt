@@ -1,0 +1,23 @@
+Elliot, 
+I attached my trig code for computing sine/cosine and inverse sine/cosine/tangent(2)
+
+Things to note: 
+
+All inputs and outputs are integers.
+
+All inputs are pass by value, not pass by address. They return a value. 
+
+Sine, cosine, and tangent take angle inputs in degrees*100. So if you want the sine of 45.26 degrees, you would pass in 4526 as an integer. What comes out is the sine of the angle*65536 (or angle*2^16) as an integer. 
+
+The inverse functions take arguments in the range +/- 65536 (2^16) which corresponds to +/- 1 in floating point arithmetic. They return angle*100. 
+
+
+Computing Euler angles:
+
+Takes input address of DCM matrix (ad) and outputs via address to out. Make sure DCM is scaled by at least 16384 for good angular resolution. Use the a2d function in Matlab and multiply the output by 16384. Write a simple test script in spin to convert the matlab DCM to euler angles. They should be identical. 
+
+PUB EULER_ANGLES_DCM(ad,out)
+
+ LONG[out][0] := -tr.asin(long[ad][2])
+ LONG[out][1] := tr.atan2(LONG[ad][8],LONG[ad][5]) 'x,y
+ LONG[out][2] := tr.atan2(LONG[ad][0],LONG[ad][1]) 'x,y
