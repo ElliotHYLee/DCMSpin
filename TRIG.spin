@@ -151,4 +151,3 @@ elseif ((ix =< 0) AND (iy =< 0))  'range -180 to -90 degrees
   iResult := -180_00 + (ATAN(||ix, ||iy))
 else 'ix => 0 and iy =< 0 'giving range -90 to 0 degrees
   iResult := ( -(ATAN(ix,||iy)))
-

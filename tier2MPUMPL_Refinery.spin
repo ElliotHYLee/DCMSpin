@@ -24,7 +24,9 @@ Var
   long runStack[128], playID, displayStack[128]
 
   long before, elapse, base1, base2, base3, flag
-  
+
+
+  long dt, prev
   
 PUB main
 
@@ -35,10 +37,7 @@ PUB main
   setMpu(%000_00_000, %000_00_000) '250 deg/s, 2g
 
   startPlay
-  base1 := cnt
-  base2 := base1
-  base3 := base2
-  flag := 1
+
   repeat
 {    
     if (flag ==1 AND(cnt > base1 + clkfreq/50))
@@ -54,7 +53,8 @@ PUB main
       base3 := cnt
       flag := 1
 }
-   printAll_GCS
+    fds.clear
+    printDt
     waitcnt(cnt + clkfreq/50)
     
     'fds.newline  
@@ -86,7 +86,15 @@ PUB main
      } 
     
 
+PRI printDt
 
+  fds.str(String("dt = "))
+  fds.decLn(dt)
+
+
+  fds.str(String("freq = "))
+  fds.dec(80_000_000/dt)
+  fds.strLn(String(" Hz"))
 
 
 PUB stopPlay
@@ -99,7 +107,9 @@ PUB startPlay
  
 PUB playSensor
   repeat
+    dt := cnt - prev
     run
+    prev := cnt
                      
 PUB initSensor(scl, sda)
   sensor.initSensor(scl, sda)
@@ -190,13 +200,13 @@ PUB getGyroIntegral(xPtr)| i
 PUB getAcc(accPtr) | i
   repeat i from 0 to 2
     Long[accPtr][i] := avgAcc[i]
-  return
+  
   
 PUB getGyro(gyroPtr) | i
   Long[gyroPtr][0] := angVel[0]    
   Long[gyroPtr][1] := angVel[1]    
   Long[gyroPtr][2] := angVel[2]    
-  return
+  
   
 PUB getHeading(headingPtr)| i
   Long[headingPtr][0] := heading[0] 

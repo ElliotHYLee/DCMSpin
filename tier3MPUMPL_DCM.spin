@@ -1,19 +1,36 @@
-CON
-  _clkmode = xtal1 + pll16x                                                    
-  _xinfreq = 5_000_000
+{
 
-PERCENT_CONST = 1000
+  variables       units
+  omega           10000 rad/s
+  acc             10000 m/s
+
+}
+
+
+
+CON
+_clkmode = xtal1 + pll16x                                                    
+_xinfreq = 5_000_000
+
+SCALE = 10_000
 
 OBJ
   sensor    : "Tier2MPUMPL_Refinery.spin"
   FDS    : "FullDuplexSerial.spin"
   math   : "MyMath.spin"  'no cog
 Var
-  long acc[3], gyro[3], mag[3], temperature, gForce
-  long playID, runStack[128]
-  long gyroNorm, D[9], DCM[9], E[9], omega[3]
-  long elapse, prev
+  long acc[3], gyro[3], mag[3], temperature   ' raw values
+  long playID, runStack[128]                  ' cog variables
+  long R[9], I[3], omega[3], eye[9]           ' DCM variables
+  long accSI[3]
+  long euler[3]                        ' Euler angles
+  long avgAcc[3], prevAccX[20], prevAccY[20], prevAccZ[20], avgAccInter[3]
+  long flag                                  ' flags
+  long dt, prev                               ' time variables
 
+{
+main is only to run this file
+}  
 PUB main
 
   FDS.quickStart  
@@ -25,12 +42,16 @@ PUB main
   repeat
     FDS.clear
     fds.newline
-    printAll
+    printDt
+    printOmega
 
-    'sendToMatlab
+    printAccSI
+
     fds.newline
-    fds.dec(elapse*1000000/clkfreq)
-    fds.strLn(string(" micro sec ==> limit = 20000 ms (50Hz)"))
+    
+    printDCM
+    fds.newline
+    printEuler
     waitcnt(cnt+clkfreq/10)
 
 PUB initSensor(scl, sda)
@@ -46,61 +67,163 @@ PUB stopPlay
 PUB startPlay
   stopPlay
   playID := cognew(playSensor, @runStack) + 1
- 
-PUB playSensor
 
-  math.getIdentityMatrix(@D)  
+  
+{
+playSensor: simulates the autopilot's sensor cog                 
+}
+PUB playSensor 'see the structure when implementing autopilot
+  
+  setUpDCM
+  
   repeat
-    prev := cnt
+    dt := cnt - prev 
     run
-    'calcDCM
-    elapse := cnt - prev
+    prev := cnt   
 
-PUB run {put this function into a loop for autopilot}
-  sensor.run 
+PUB getIdentity
+
+  math.getIdentityMatrix(@R)
+
+PUB setUpDCM | counter
+
+  repeat counter from 0 to 2
+    I[counter] := 0  
+    euler[counter] := 0
+    
+  repeat 50
+    preRun
+    'accRaw_to_10000mps
+    getAvgAcc
+
+  math.a2d(@R,@avgAcc)
+  math.d2a(@R, @euler) 
+{
+PRI accRaw_to_10000mps | counter
+
+  repeat counter from 0 to 3
+    accSI[counter] := ((acc[counter] * SCALE + 16384/2)/ 16384 *981+50)/100
+
+}
+PUB getAvgAcc | counter, avgCoef
+
+  avgCoef:= 20
+
+  repeat counter from 0 to (avgCoef-2)
+    prevAccX[counter] := prevAccX[counter+1]
+    prevAccY[counter] := prevAccY[counter+1]
+    prevAccZ[counter] := prevAccZ[counter+1] 
+  prevAccX[avgCoef-1] := acc[0]
+  prevAccY[avgCoef-1] := acc[1]
+  prevAccZ[avgCoef-1] := acc[2]
+    
+  avgAccInter[0] := 0
+  avgAccInter[1] := 0
+  avgAccInter[2] := 0
+    
+  repeat i from 0 to (avgCoef-1)
+    avgAccInter[0] += prevAccX[i]/avgCoef 
+    avgAccInter[1] += prevAccY[i]/avgCoef
+    avgAccInter[2] += prevAccZ[i]/avgCoef
+
+  avgAcc[0] := avgAccInter[0]
+  avgAcc[1] := avgAccInter[1]
+  avgAcc[2] := avgAccInter[2]
+
+PUB preRun {put this function into a loop for autopilot}
+    
+  sensor.run
   sensor.getAcc(@acc)
   sensor.getGyro(@gyro)
   sensor.getHeading(@mag)
-  sensor.getTemp(@temperature)
-  getGFroce
 
-PUB getGFroce
-
-  gForce := (math.sqrt(acc[0]*acc[0] + acc[1]*acc[1] + acc[2]*acc[2])* 100 + 8192 )/ 16384 
-
-
-PUB  calcDCM | dt{updates eAngle}
-  'gyro max = 2000 deg/s
-  'long max = (2^32)/2 - 1 = 21_4748_3647 ( signed 32 bits ) 
-  'long min = -(2^32)/2 = -21_4748_3648   ( signed 32 bits )
-  'gyro norm max = sqrt(3*2000^2) = 1200_0000
-  dt := 1
-  gyroNorm := math.sqrt(gyro[0]*gyro[0] + gyro[1]*gyro[1] + gyro[2]*gyro[2])
+ 
+PUB run {put this function into a loop for autopilot}
+    
+  sensor.run
+  sensor.getAcc(@acc)
+  sensor.getGyro(@gyro)
+  sensor.getHeading(@mag)
   getOmega
-  math.skew(@D, omega[0], omega[1] ,omega[2], 1, dt)   
+  'sensor.getTemp(@temperature)
+  'accRaw_to_10000mps
+  'calcDCM
+
+  'math.d2a(@R, @euler)
+  
+{ calcDCM: updates eAngle}
+
+PUB  calcDCM | temp[9]
+
+  
+  'math.skew(@temp , omega[0], omega[1] ,omega[2])   
+
+   
+
+PRI getOmega | counter
+
+  repeat counter from 0 to 3
+    omega[counter] := gyro[counter]*SCALE/131*31416/10_000/180   '10_000 rad/s
+    omega[counter] += I[counter]
 
 
-  copyDCM 
 
 
-PRI printAll | i, j
-  repeat i from 0 to 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+PRI printAccSI | counter
+
+  fds.str(String("accX = ")) 
+  fds.decln(acc[0])
+  'fds.strln(String(" (10000^-1 m/s)"))
+
+  fds.str(String("accY = "))  
+  fds.decln(acc[1])
+  'fds.strln(String(" (10000^-1 m/s)"))
+  
+  fds.str(String("accZ = ")) 
+  fds.decln(acc[2])
+  'fds.strln(String(" (10000^-1 m/s)"))
+
+PRI printEuler
+
+  fds.str(String("pitch = "))
+  fds.decln(euler[0])
+
+  fds.str(String("roll = "))
+  fds.decln(euler[1])
+
+  fds.str(string("yaw = "))
+  fds.decln(euler[2])
+  
+
+PRI printAll | counter, j
+  repeat counter from 0 to 2
     repeat j from 0 to 2
-      if i==0
+      if counter==0
         FDS.str(String("Acc["))
         FDS.dec(j)
         FDS.str(String("]=  "))      
         FDS.decLn(acc[j])
         
-        
-      if i==1
+      if counter==1
         FDS.str(String("Gyro["))
         FDS.dec(j)
         FDS.str(String("]= "))      
         FDS.decLn(gyro[j])
 
-        
-      if i ==2
+      if counter ==2
         FDS.str(String("Mag["))
         FDS.dec(j)
         FDS.str(String("]= "))      
@@ -111,19 +234,18 @@ PRI printAll | i, j
   FDS.Str(String("Tempearture = "))
   FDS.decLn(temperature)
   FDS.Str(String("% gForce = "))
-  FDS.decLn(gForce)
+'  FDS.decLn(gForce)
+PRI printDt
 
-PRI getOmega
-  '1_0000_0000 > gyroNormMax = 1200_0000, also no overflow should occur
-  if ((gyroNorm > 0) OR (gyroNorm < 0)) 
-    omega[0] := 1_0000_0000/gyroNorm*gyro[0]/1000     'omega[0] = 0.xxxxx * 100000 <- 5 decimal points
-    omega[1] := 1_0000_0000/gyroNorm*gyro[1]/1000     'omega[1] = 0.xxxxx * 100000  
-    omega[2] := 1_0000_0000/gyroNorm*gyro[2]/1000     'omega[2] = 0.xxxxx * 100000
-  else
-    omega[0] := 0
-    omega[1] := 0
-    omega[2] := 0
+  fds.str(String("dt = "))
+  fds.decLn(dt)
 
+
+  fds.str(String("freq = "))
+  fds.dec(80_000_000/dt)
+  fds.strLn(String(" Hz"))
+
+   
 PRI sendToMatlab
 
   fds.dec(acc[0])
@@ -133,7 +255,8 @@ PRI sendToMatlab
   fds.dec(acc[2])
   fds.str(String(" "))
 
-PRI printBasicInfo| i, j
+
+PRI printBasicInfo
 
   fds.strLn(String("acc"))
   fds.str(String("X: "))
@@ -152,7 +275,7 @@ PRI printBasicInfo| i, j
   fds.decLn(gyro[2])
   fds.newline
   fds.str(string("normal of gyro: "))
-  fds.decLn(gyroNorm)
+ ' fds.decLn(gyroNorm)
 
   fds.newline
   printOmega
@@ -183,7 +306,7 @@ PRI printBasicInfo| i, j
 PRI printOmega
 
   fds.newline
-  fds.strLn(String("omega"))
+  fds.strLn(String("omega(mili rad/s)"))
   fds.str(String("X: "))
   fds.dec(omega[0])
   fds.str(String(" Y: "))
@@ -193,19 +316,47 @@ PRI printOmega
   fds.newline 
 
 
-PRI printDCM | i
-
+PRI printDCM | iter, digit, counter
   
-  fds.str(String("R = "))
+  fds.str(String("R = (rad*65536) "))
   fds.newline
-  repeat i from 0 to 8
-    fds.dec(D[i])
-    if ((i+1)//3 == 0)
+  
+  repeat iter from 0 to 8
+    digit := getDigit(R[iter])  
+    counter := 0
+    fds.dec(R[iter])
+    repeat counter from 0 to (10-digit)
+      fds.str(String(" "))
+    if ((iter+1)//3 == 0)
       fds.newline
     else
       fds.str(string(" "))  
 
-PRI copyDCM | i
+PRI getDigit(input)| ans
 
-  repeat i from 0 to 8
-    DCM[i] := D[i]
+
+  ans := 0
+  if input < 0
+    input := -input
+    flag := 1
+
+    
+  if (input <10)
+    ans := 1
+  elseif (input <100)
+    ans := 2
+  elseif (input <1000)
+    ans := 3
+  elseif (input < 10000)
+    ans := 4
+  elseif (input < 100000)
+    ans := 5
+  elseif(input <1000000)
+    ans:= 6
+
+  if flag ==1
+    ans += 1
+
+  return ans
+
+   

@@ -20,8 +20,13 @@ Takes input address of DCM matrix (ad) and outputs via address to out. Make sure
 
 Matlab and multiply the output by 16384. Write a simple test script in spin to convert the matlab DCM to euler angles. They should be identical. 
 
-PUB EULER_ANGLES_DCM(ad,out)
+PUB EULER_ANGLES_DCM(ad,out)  
 
- LONG[out][0] := -tr.asin(long[ad][2])
- LONG[out][1] := tr.atan2(LONG[ad][8],LONG[ad][5]) 'x,y
- LONG[out][2] := tr.atan2(LONG[ad][0],LONG[ad][1]) 'x,y
+ LONG[out][0] := -tr.asin(long[ad][2])               'q -> theta
+ LONG[out][1] := tr.atan2(LONG[ad][8],LONG[ad][5])   'x,y   
+ LONG[out][2] := tr.atan2(LONG[ad][0],LONG[ad][1])   'x,y    ' r -> psi, yaw maybe?
+
+
+' colum vectors!
+ad = [ [0 1 2]'  [3 4 5]' [6 7 8]' ]
+
