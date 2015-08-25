@@ -38,7 +38,7 @@ PUB main
   initSensor(15,14)
   setMpu(%000_00_000, %000_00_000) '250 deg/s, 2g
   startPlay
-
+                  
   repeat
     FDS.clear
     fds.newline
