@@ -45,7 +45,7 @@ fds.quickStart
 
 
 { ================================================= 
-  a2d : get first euler angle from accelerometer
+  a2d : getting DCM from euler angles
   @Rptr in mili radian
   @eulerPtr in degree*100 , theta, phi, psi <- always this order
 

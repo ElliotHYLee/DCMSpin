@@ -58,12 +58,12 @@ PUB Main
     
 {
 d2a  : direction cosince matrix to angle
-@ad  : DCM pointer (in rad*10_000), matlab convention of data representation
+@ad  : DCM pointer (in value*10_000), matlab convention of data representation
 @out : Euler angle pointers in degree*100
 }
 PUB d2a(ad,out) | counter
 
-  'convert centirad to rad*32768
+  'convert value*10000 to rad*32768
   'origanl, destination, DCM factor, scale factor
   copy(ad, @temp3x3, 10_000, 32768) 
 

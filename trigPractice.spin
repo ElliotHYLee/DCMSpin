@@ -11,19 +11,22 @@ OBJ
 Var
   long a
 
-PUB main
-
+PUB main | flag
+  flag :=0
   a := 10000  'DCM radian = 10000*rad = 0.0169
   a := a*65536/10000   ' input = radian * 65536
-  
+  a := 9814
   fds.quickstart
 
-  repeat
+  repeat while (flag==0)
     fds.clear
     fds.str(string("intput = "))
-    fds.decln(a)
-    fds.str(string("result = "))
-    fds.decLn(tr.asin(-16384))
+    fds.dec(a)
+    fds.str(string(" result = "))
+    fds.decLn(tr.asin(a))
+    'a+=1
+    'if a> 65555
+    '  flag :=1
     waitcnt(cnt + clkfreq/10)
 
 

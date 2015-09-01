@@ -10,7 +10,8 @@ OBJ
   
 VAR
 
-  long DCM[9], euler[3],temp3x3[9], eOut[3]
+  long DCM[9], euler[3],temp3x3[9], eOut[3], i, j, k
+  long error[3]
 
 PUB main
 fds.quickStart
@@ -29,30 +30,59 @@ fds.quickStart
 
 
   
-  euler[0] := -10
-  euler[1] := 121
-  euler[2] := 0    
+  euler[0] := 13000
+  euler[1] := 13000
+  euler[2] := 13000    
 
   eOut[0] :=0
   eOut[1] :=0
   eOut[2] :=0
   
-  repeat
-    fds.clear
-    a2d(@DCM, @euler)
-    printEuler
-    fds.newline
-    printDCM
-    fds.newline
-    d2a(@DCM, @eOut) 
-    printEuler2
-    
-    waitcnt(cnt + clkfreq/10)
+    repeat i from -10000 to 10000
+      repeat j from -10000 to 10000
+        repeat k from -10000 to 10000
+          euler[0] := i
+          euler[1] := j
+          euler[2] := k
+          k+=1000
+            
+         
+          fds.clear
+          a2d(@DCM, @euler)
+         ' printEuler
+          'fds.newline
+          'printDCM
+          'fds.newline
+          d2a(@DCM, @eOut) 
+          'printEuler2
 
+          'fds.newline
+          
+          error[0] := (euler[0] - eOut[0])'*100/euler[0]
+          error[1] := (euler[1] - eOut[1])'*100/euler[1]
+          error[2] := (euler[2] - eOut[2])'*100/euler[2]
+
+          
+          
+          
+          if (error[0] > 100) OR (error[1] > 100) OR (error[2] > 100)
+            printEuler
+            fds.newline
+            printDCM
+            fds.newline
+            printEuler2
+            fds.newline
+            printError
+            waitcnt(cnt +clkfreq*5)
+          
+          
+          waitcnt(cnt + clkfreq/10)
+        j+=1000
+      i+=1000
 
 { ================================================= 
-  a2d : get first euler angle from accelerometer
-  @Rptr in mili radian
+  a2d : getting DCM from euler angles
+  @Rptr in value * 10_000
   @eulerPtr in degree*100 , theta, phi, psi <- always this order
 
   @updates Rptr in 10_000
@@ -66,43 +96,43 @@ PUB a2d(RPtr, eulerPtr)| th, ph, ps, temp
                   
   long[RPtr][0] := (conv(tr.cosine(th)) * conv(tr.cosine(ps))+CMNSACLE/2) / CMNSACLE 
 
-  temp := ((conv(tr.sine(ph))*conv(tr.sine(th)) +CMNSACLE/2)/10000 * conv(tr.cosine(ps))+CMNSACLE/2)/10000
-  long[RPtr][1] :=  temp - (conv(tr.cosine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/10000
+  temp := ((conv(tr.sine(ph))*conv(tr.sine(th)) +CMNSACLE/2)/10000 * conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][1] :=  temp - (conv(tr.cosine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
   
-  temp := ((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/10000*conv(tr.cosine(ps))+CMNSACLE/2)/10000
-  long[RPtr][2] :=  temp + (conv(tr.sine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/10000
+  temp := ((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/10000*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][2] :=  temp + (conv(tr.sine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
 
-  long[RPtr][3] := (conv(tr.cosine(th))*conv(tr.sine(ps))+CMNSACLE/2)/10000
+  long[RPtr][3] := (conv(tr.cosine(th))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
 
-  temp := ((conv(tr.sine(ph))*conv(tr.sine(th))+CMNSACLE/2)/10000*conv(tr.sine(ps))+CMNSACLE/2)/10000
-  long[RPtr][4] := temp + (conv(tr.cosine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/10000   
+  temp := ((conv(tr.sine(ph))*conv(tr.sine(th))+CMNSACLE/2)/CMNSACLE*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][4] := temp + (conv(tr.cosine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE   
 
-  temp :=((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/10000* conv(tr.sine(ps))+CMNSACLE/2)/10000
-  long[RPtr][5] := temp - (conv(tr.sine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/10000
+  temp :=((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/CMNSACLE* conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][5] := temp - (conv(tr.sine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
 
   long[RPtr][6] := -conv(tr.sine(th))
-  long[RPtr][7] := (conv(tr.sine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/10000
-  long[RPtr][8] := (conv(tr.cosine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/10000
+  long[RPtr][7] := (conv(tr.sine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][8] := (conv(tr.cosine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/CMNSACLE
 
 
 { ================================================= 
   conv : convert 65536 to 10_000 
-  @value in 65536 : 1
+  @value: it is in 65536 : 1
 
   @returns value in 10_000
 =================================================== }
 PUB conv(value)
 
-  result := (value*10_000+65536/2)/65536
+  result := (value*10_000 + 65536/2)/65536
 
 {
 d2a  : direction cosince matrix to angle
-@ad  : DCM pointer (in rad*10_000), matlab convention of data representation
+@ad  : DCM pointer (in value*10_000), matlab convention of data representation
 @out : Euler angle pointers in degree*100
 }
 PUB d2a(RPtr,outPtr) | counter
 
-  'convert centirad to rad*32768
+  'convert 10_000*value to rad*32768
   'origanl, destination, DCM factor, scale factor
   copy(RPtr, @temp3x3, 10_000, 32768) 
 
@@ -111,7 +141,7 @@ PUB d2a(RPtr,outPtr) | counter
 '  LONG[out][2] := tr.atan2(LONG[temp][0], LONG[temp][1]) ' r, yaw, phi
 
                                                     
-  LONG[outPtr][0] := -tr.asin(temp3x3[6])*2           ' q, pitch, theta
+  LONG[outPtr][0] := -tr.asin(temp3x3[6]*2)           ' q, pitch, theta
   LONG[outPtr][1] := tr.atan2(temp3x3[8], temp3x3[7]) ' p, roll, psi  
   LONG[outPtr][2] := tr.atan2(temp3x3[0], temp3x3[3]) ' r, yaw, phi   
 
@@ -137,9 +167,14 @@ PRI copy(oriPtr, desPtr, convention, scale) | counter
 
 
 
+PRI printError
 
-
-
+  fds.str(String("ERR_pitch = "))
+  fds.decln(error[0])
+  fds.str(String("ERR_roll = "))
+  fds.decln(error[1])
+  fds.str(String("ERR_yaw = "))
+  fds.decln(error[2])
 
 PRI printEuler
   fds.strln(String("unit = centi degree"))
