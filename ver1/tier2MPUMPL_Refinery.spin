@@ -39,7 +39,7 @@ PUB main
   startPlay
 
   repeat
-    fds.clear 
+    
     if (flag ==1 AND(cnt > base1 + clkfreq/50))
       printAcc_GCS
       base1 := cnt
@@ -53,11 +53,8 @@ PUB main
       base3 := cnt
       flag := 1
 
-
+    fds.clear
     printAll
-'    printMag
-    
-    
     printDt
     waitcnt(cnt + clkfreq/10)
     
@@ -90,6 +87,15 @@ PUB main
      } 
     
 
+PRI printDt
+
+  fds.str(String("dt = "))
+  fds.decLn(dt)
+
+
+  fds.str(String("freq = "))
+  fds.dec(80_000_000/dt)
+  fds.strLn(String(" Hz"))
 
 
 PUB stopPlay
@@ -117,9 +123,8 @@ PUB setMpu(gyroSet, accSet)
 PUB run
 
   sensor.reportData(@acc, @gyro,@mag, @temperature)
-           
+   
   getAvgMag
-
 
   getAvgAcc
 
@@ -128,11 +133,11 @@ PUB run
   angVel[2] := gyro[2]' / 131  ' degree per second    
 
 
-  heading[0] := avgMag[0] '- 5     'magneto meter offset
-  heading[1] := avgMag[1] '- 42
-  heading[2] := avgMag[2] '+ 2
+  heading[0] := avgMag[0] - 5     'magneto meter offset
+  heading[1] := avgMag[1] - 42
+  heading[2] := avgMag[2] + 2
  
-   
+  
 PUB getAvgAcc | i, avgCoef
 
   avgCoef:= 5
@@ -220,19 +225,6 @@ PUB magY
   
 PUB magZ
   return heading[2]  
-
-
-
-PRI printDt
-
-  fds.str(String("dt = "))
-  fds.decLn(dt)
-
-
-  fds.str(String("freq = "))
-  fds.dec(80_000_000/dt)
-  fds.strLn(String(" Hz"))
-
 
 PRI printAll_GCS
 
@@ -322,25 +314,7 @@ PRI printMagInfo| i, j
   fds.newline  
   fds.str(String("x/y (aTan)"))
   fds.decLn(avgMag[0]/avgMag[1])
-
-
-PRI printMag| i, j
-
-
-  fds.strLn(String("Avg Magnetometer"))  
-  fds.str(String("X: "))
-  fds.dec(mag[0])
-  fds.str(String(" Y: "))
-  fds.dec(mag[1])
-  fds.str(String(" Z: "))
-  fds.decLn(mag[2])
-  fds.newline
-  fds.str(string("magnitude^2 of magnetometer: "))
-  fds.decLn(avgMag[0]*avgMag[0] + avgMag[1]*avgMag[1] + avgMag[2]*avgMag[2])
-
- ' fds.newline  
- ' fds.str(String("x/y (aTan)"))
- ' fds.decLn(avgMag[0]/avgMag[1])
+  
   
 PRI printSomeX| i, j 
   fds.dec(gyro[1])
@@ -410,7 +384,7 @@ PRI printAll | i, j
         FDS.str(String("Gyro["))
         FDS.dec(j)
         FDS.str(String("]= "))      
-        FDS.decLn(gyro[j])
+        FDS.decLn(gyro[j]/131)
       if i ==2
         FDS.str(String("Mag["))
         FDS.dec(j)

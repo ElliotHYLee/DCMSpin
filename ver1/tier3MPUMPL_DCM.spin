@@ -102,7 +102,7 @@ PUB run
   dt := cnt - prev 
   
   'sensor.getTemp(@temperature)
-  
+  'calcDCM
 
   'math.d2a(@R, @euler)
 
@@ -192,7 +192,7 @@ calcDCM: updates eAngle
 PUB  calcDCM | temp1[9]
 
   getOmega
-  'math.skew(@temp1 , omega[0], omega[1] ,omega[2])
+  math.skew(@temp1 , omega[0], omega[1] ,omega[2])
   'math.scalarMultOp33(@temp1, dt)
   'math.addOp33(@eye, @temp)
    
