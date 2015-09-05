@@ -2,6 +2,8 @@ CON
   _clkmode = xtal1 + pll16x                                                    
   _xinfreq = 5_000_000
 
+CMNSACLE =10_000         
+
 OBJ
 
   FDS    : "FullDuplexSerial.spin"
@@ -46,7 +48,7 @@ fds.quickStart
 
 { ================================================= 
   a2d : getting DCM from euler angles
-  @Rptr in mili radian
+  @Rptr in value * 10_000
   @eulerPtr in degree*100 , theta, phi, psi <- always this order
 
   @updates Rptr in 10_000
@@ -58,40 +60,35 @@ PUB a2d(RPtr, eulerPtr)| th, ph, ps, temp
   ps := long[eulerPtr][2]
 
                   
-  long[RPtr][0] := conv(tr.cosine(th)) * conv(tr.cosine(ps)) / 10000 
+  long[RPtr][0] := (conv(tr.cosine(th)) * conv(tr.cosine(ps))+CMNSACLE/2) / CMNSACLE 
 
-  temp := conv(tr.sine(ph))*conv(tr.sine(th))/10000 * conv(tr.cosine(ps))/10000
-  long[RPtr][1] :=  temp - conv(tr.cosine(ph))*conv(tr.sine(ps))/10000
+  temp := ((conv(tr.sine(ph))*conv(tr.sine(th)) +CMNSACLE/2)/10000 * conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][1] :=  temp - (conv(tr.cosine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
   
-  temp := conv(tr.cosine(ph))*conv(tr.sine(th))/10000*conv(tr.cosine(ps))/10000
-  long[RPtr][2] :=  temp + conv(tr.sine(ph))*conv(tr.sine(ps))/10000
+  temp := ((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/10000*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][2] :=  temp + (conv(tr.sine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
 
-  long[RPtr][3] := conv(tr.cosine(th))*conv(tr.sine(ps))/10000
+  long[RPtr][3] := (conv(tr.cosine(th))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
 
-  temp := conv(tr.sine(ph))*conv(tr.sine(th))/10000*conv(tr.sine(ps))/10000
-  long[RPtr][4] := temp + conv(tr.cosine(ph))*conv(tr.cosine(ps))/10000   
+  temp := ((conv(tr.sine(ph))*conv(tr.sine(th))+CMNSACLE/2)/CMNSACLE*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][4] := temp + (conv(tr.cosine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE   
 
-  temp := conv(tr.cosine(ph))*conv(tr.sine(th))/10000* conv(tr.sine(ps))/10000
-  long[RPtr][5] := temp - conv(tr.sine(ph))*conv(tr.cosine(ps))/10000
+  temp :=((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/CMNSACLE* conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][5] := temp - (conv(tr.sine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
 
   long[RPtr][6] := -conv(tr.sine(th))
-  long[RPtr][7] := conv(tr.sine(ph))*conv(tr.cosine(th))/10000
-  long[RPtr][8] := conv(tr.cosine(ph))*conv(tr.cosine(th))/10000
-
+  long[RPtr][7] := (conv(tr.sine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/CMNSACLE
+  long[RPtr][8] := (conv(tr.cosine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/CMNSACLE
 
 { ================================================= 
   conv : convert 65536 to 10_000 
-  @value in 65536 : 1
+  @value: it is in 65536 : 1
 
   @returns value in 10_000
 =================================================== }
 PUB conv(value)
 
-  result := (value*10_000+65536/2)/65536
-
-
-
-
+  result := (value*10_000 + 65536/2)/65536
 
 
 

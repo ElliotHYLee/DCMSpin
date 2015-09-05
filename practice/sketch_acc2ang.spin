@@ -62,7 +62,7 @@ PUB acc2ang(accPtr, eulerPtr) | x, y, temp
   y := long[accPtr][0] 
 
   long[eulerPtr][0] := tr.atan2(x, y)  ' theta
-  long[eulerPtr][1] := tr.atan2(-acc[2], -acc[1])
+  long[eulerPtr][1] := tr.atan2(-long[accPtr][2], -long[accPtr][1]) 'phi
   long[eulerPtr][2] := 0
 
   

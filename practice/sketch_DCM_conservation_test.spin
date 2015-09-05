@@ -11,7 +11,7 @@ OBJ
 VAR
 
   long DCM[9], euler[3],temp3x3[9], eOut[3], i, j, k
-  long error[3]
+  long error[3], maxE[3]
 
 PUB main
 fds.quickStart
@@ -29,6 +29,9 @@ fds.quickStart
   DCM[8] := 0   
 
 
+  maxE[0] :=0
+  maxE[1] :=0
+  maxE[2] :=0
   
   euler[0] := 13000
   euler[1] := 13000
@@ -38,9 +41,9 @@ fds.quickStart
   eOut[1] :=0
   eOut[2] :=0
   
-    repeat i from -10000 to 10000
-      repeat j from -10000 to 10000
-        repeat k from -10000 to 10000
+    repeat i from -8900 to 8900
+      repeat j from -8900 to 8900
+        repeat k from -8900 to 8900
           euler[0] := i
           euler[1] := j
           euler[2] := k
@@ -62,8 +65,16 @@ fds.quickStart
           error[1] := (euler[1] - eOut[1])'*100/euler[1]
           error[2] := (euler[2] - eOut[2])'*100/euler[2]
 
-          
-          
+          if error[0] > maxE[0]
+            maxE[0] := error[0]
+          if error[1] > maxE[1]
+            maxE[1] := error[1]
+          if error[2] > maxE[2]
+            maxE[2] := error[2]
+
+          printEuler
+          fds.newline
+          printMaxError 
           
           if (error[0] > 100) OR (error[1] > 100) OR (error[2] > 100)
             printEuler
@@ -73,7 +84,8 @@ fds.quickStart
             printEuler2
             fds.newline
             printError
-            waitcnt(cnt +clkfreq*5)
+            
+            'waitcnt(cnt +clkfreq*5)
           
           
           waitcnt(cnt + clkfreq/10)
@@ -165,8 +177,13 @@ PRI copy(oriPtr, desPtr, convention, scale) | counter
 
 
 
-
-
+PRI printMaxError
+  fds.str(String("maxERR_pitch = "))
+  fds.decln(maxE[0])
+  fds.str(String("max ERR_roll = "))
+  fds.decln(maxE[1])
+  fds.str(String("max ERR_yaw = "))
+  fds.decln(maxE[2])
 PRI printError
 
   fds.str(String("ERR_pitch = "))

@@ -12,7 +12,7 @@ CON
 _clkmode = xtal1 + pll16x                                                    
 _xinfreq = 5_000_000
 
-SCALE = 10_000
+CMNSACLE = 10_000
 
 OBJ
   sensor    : "Tier2MPUMPL_Refinery.spin"
@@ -21,7 +21,7 @@ OBJ
 Var
   long acc[3], gyro[3], mag[3], temperature   ' raw values
   long playID, runStack[128]                  ' cog variables
-  long R[9], I[3], omega[3], eye[9]           ' DCM variables
+  long DCM[9], I[3], omega[3], eye[9]           ' DCM variables
   long accSI[3]
   long euler[3], eulerInput[3]               ' Euler angles
   long avgAcc[3], prevAccX[20], prevAccY[20], prevAccZ[20], avgAccInter[3]
@@ -47,13 +47,18 @@ PUB main
 
     printAcc
     fds.newline
-    printEulerInput
+    
+    printFirstEulerInput
     fds.newline
     
     printDCM
     fds.newline
-    printEuler
+    
+    printEulerOutput
+    fds.newline 
     waitcnt(cnt+clkfreq/10)
+
+
 
 PUB initSensor(scl, sda)
   sensor.initSensor(scl, sda)
@@ -75,17 +80,39 @@ playSensor: simulates the autopilot's sensor cog
 }
 PUB playSensor 'see the structure when implementing autopilot
   
-  setUpDCM
+  setUpDCM   'this includes preRun
   
   repeat
-    dt := cnt - prev 
     run
-    prev := cnt   
 
-PUB getIdentity
+{======================================================
+run : - runs the primary DCM calculation
+      - must be called at autopilot main
+======================================================}
 
-  math.getIdentityMatrix(@R)
+PUB run 
 
+  prev := cnt  
+    
+  sensor.run
+  sensor.getAcc(@acc)
+  sensor.getGyro(@gyro)
+  sensor.getHeading(@mag)
+  
+  dt := cnt - prev 
+  
+  'sensor.getTemp(@temperature)
+  'calcDCM
+
+  'math.d2a(@R, @euler)
+
+{======================================================
+setUpDCM : - prepares first Euler angles
+           - prepares first DCM
+           - prepares I, euler valriables
+
+           - must be called at autopilot main
+======================================================}
 PUB setUpDCM | counter
 
   repeat counter from 0 to 2
@@ -94,19 +121,24 @@ PUB setUpDCM | counter
     
   repeat 50
     preRun
-    'accRaw_to_10000mps
     getAvgAcc
 
   math.acc2ang(@avgAcc, @eulerInput)
-  math.a2d(@R,@eulerInput)
-  math.d2a(@R, @euler) 
-{
-PRI accRaw_to_10000mps | counter
+  math.a2d(@DCM,@eulerInput)
+  math.d2a(@DCM, @euler) 
+  math.getIdentityMatrix(@eye)
 
-  repeat counter from 0 to 3
-    accSI[counter] := ((acc[counter] * SCALE + 16384/2)/ 16384 *981+50)/100
+{======================================================
+preRun : run and accelerometer values to calcualte first Euler angles
+======================================================} 
+PUB preRun 
+    
+  sensor.run
+  sensor.getAcc(@acc)
 
-}
+{======================================================
+getAvgAcc : calculates average acceleromete values
+======================================================}
 PUB getAvgAcc | counter, avgCoef
 
   avgCoef:= 20
@@ -132,40 +164,48 @@ PUB getAvgAcc | counter, avgCoef
   avgAcc[1] := avgAccInter[1]
   avgAcc[2] := avgAccInter[2]
 
-PUB preRun {put this function into a loop for autopilot}
-    
-  sensor.run
-  sensor.getAcc(@acc)
-  sensor.getGyro(@gyro)
-  sensor.getHeading(@mag)
 
- 
-PUB run {put this function into a loop for autopilot}
-    
-  sensor.run
-  sensor.getAcc(@acc)
-  sensor.getGyro(@gyro)
-  sensor.getHeading(@mag)
+
+
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+
+'DCM primary interation codes start from here
+
+{=====================================================================
+calcDCM: updates eAngle
+   step 1: get omega
+   step 2: make new DCM
+   step 3: orthogonalize
+   temp 4: compensation
+=====================================================================}
+PUB  calcDCM | temp1[9]
+
   getOmega
-  'sensor.getTemp(@temperature)
-  'accRaw_to_10000mps
-  'calcDCM
-
-  'math.d2a(@R, @euler)
-  
-{ calcDCM: updates eAngle}
-
-PUB  calcDCM | temp[9]
-
-  
-  'math.skew(@temp , omega[0], omega[1] ,omega[2])   
-
+  math.skew(@temp1 , omega[0], omega[1] ,omega[2])
+  'math.scalarMultOp33(@temp1, dt)
+  'math.addOp33(@eye, @temp)
    
 
+
+{=====================================================================
+getOmega: - get omega and converts to CMNSCALE
+          - compensates omega with cumulatative error
+=====================================================================}
 PRI getOmega | counter
 
   repeat counter from 0 to 3
-    omega[counter] := gyro[counter]*SCALE/131*31416/10_000/180   '10_000 rad/s
+    omega[counter] := gyro[counter]*CMNSACLE/131*31416/10_000/180   '10_000 rad/s
     omega[counter] += I[counter]
 
 
@@ -184,6 +224,27 @@ PRI getOmega | counter
 
 
 
+
+
+
+
+
+
+
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+' print code start from here
+
 PRI printAcc | counter
 
   fds.str(String("accX = ")) 
@@ -199,28 +260,41 @@ PRI printAcc | counter
   'fds.strln(String(" (10000^-1 m/s)"))
 
 
-PRI printEulerInput
+PRI printFirstEulerInput
+
+  fds.strLn(String("First Euler Angles"))
 
   fds.str(String("pitch = "))
-  fds.decln(eulerInput[0])
+  fds.dec(eulerInput[0])
+  fds.strLn(String("  centi degree"))
 
+  
   fds.str(String("roll = "))
-  fds.decln(eulerInput[1])
+  fds.dec(eulerInput[1])
+  fds.strLn(String("  centi degree"))
 
   fds.str(string("yaw = "))
-  fds.decln(eulerInput[2])
+  fds.dec(eulerInput[2])
+  fds.strLn(String("  centi degree"))
 
 
-PRI printEuler
+PRI printEulerOutput
+
+
+  fds.strLn(String("Calcualted Euler Angles"))
 
   fds.str(String("pitch = "))
-  fds.decln(euler[0])
+  fds.dec(euler[0])
+  fds.strLn(String("  centi degree"))
 
+  
   fds.str(String("roll = "))
-  fds.decln(euler[1])
+  fds.dec(euler[1])
+  fds.strLn(String("  centi degree"))
 
   fds.str(string("yaw = "))
-  fds.decln(euler[2])
+  fds.dec(euler[2])
+  fds.strLn(String("  centi degree"))
   
 
 PRI printAll | counter, j
@@ -261,15 +335,6 @@ PRI printDt
   fds.strLn(String(" Hz"))
 
    
-PRI sendToMatlab
-
-  fds.dec(acc[0])
-  fds.str(String(" ")) 
-  fds.dec(acc[1]) 
-  fds.str(String(" "))
-  fds.dec(acc[2])
-  fds.str(String(" "))
-
 
 PRI printBasicInfo
 
@@ -337,9 +402,9 @@ PRI printDCM | iter, digit, counter
   fds.newline
   
   repeat iter from 0 to 8
-    digit := getDigit(R[iter])  
+    digit := getDigit(DCM[iter])  
     counter := 0
-    fds.dec(R[iter])
+    fds.dec(DCM[iter])
     repeat counter from 0 to (10-digit)
       fds.str(String(" "))
     if ((iter+1)//3 == 0)

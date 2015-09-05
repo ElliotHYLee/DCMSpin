@@ -39,7 +39,7 @@ PUB main
   startPlay
 
   repeat
-{    
+    
     if (flag ==1 AND(cnt > base1 + clkfreq/50))
       printAcc_GCS
       base1 := cnt
@@ -52,7 +52,7 @@ PUB main
       printMag_GCS
       base3 := cnt
       flag := 1
-}
+
     fds.clear
     printDt
     waitcnt(cnt + clkfreq/50)
@@ -107,9 +107,9 @@ PUB startPlay
  
 PUB playSensor
   repeat
-    dt := cnt - prev
+    prev := cnt  
     run
-    prev := cnt
+    dt := cnt - prev
                      
 PUB initSensor(scl, sda)
   sensor.initSensor(scl, sda)
@@ -122,7 +122,7 @@ PUB setMpu(gyroSet, accSet)
 PUB run
 
   sensor.reportData(@acc, @gyro,@mag, @temperature)
-
+   
   getAvgMag
 
   getAvgAcc
@@ -135,7 +135,7 @@ PUB run
   heading[0] := avgMag[0] - 5     'magneto meter offset
   heading[1] := avgMag[1] - 42
   heading[2] := avgMag[2] + 2
-
+ 
   
 PUB getAvgAcc | i, avgCoef
 

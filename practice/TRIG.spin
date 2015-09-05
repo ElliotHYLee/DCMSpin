@@ -139,8 +139,6 @@ PUB  ATAN2 (ix,iy) : iResult
 'calculates 100*atan2(iy/ix)=100*atan2(iy,ix) in deg for ix, iy in range -32768 to 32767
 'check for -32768 which is not handled correctly
 
-'same arguemnts as Matlab's atan2(x,y). But arguements's order is opposite.
-
 repeat while ((||ix) > 32768) OR ((||iy) > 32768) 'if not in proper range scale accordingly 
   ix ~>= 1
   iy ~>= 1  

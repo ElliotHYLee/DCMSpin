@@ -54,19 +54,19 @@ PUB skew(Dptr, a, b, c)
   long[Dptr][7] := -c
 
                                 
-PUB getIdentityMatrix(EPtr) { 10^4 = unity to represent 1.xxxx}
+PUB getIdentityMatrix(E) { 10^4 = unity to represent 1.xxxx}
 
-  long[EPtr][0] := 10000
-  long[EPtr][1] := 0
-  long[EPtr][2] := 0
+  long[E][0] := 1000
+  long[E][1] := 0
+  long[E][2] := 0
 
-  long[EPtr][3] := 0
-  long[EPtr][4] := 10000
-  long[EPtr][5] := 0
+  long[E][3] := 0
+  long[E][4] := 1000
+  long[E][5] := 0
 
-  long[EPtr][6] := 0
-  long[EPtr][7] := 0
-  long[EPtr][8] := 10000  
+  long[E][6] := 0
+  long[E][7] := 0
+  long[E][8] := 1000  
   
 PUB getSign(value)
 
@@ -82,31 +82,15 @@ PUB getAbs(value)
     result := -value
 
 
-{==================================================================
-scalarMultOp33: 3by3 matrix multiplication of scalar
 
-    @matAPtr : matrix A
-    @k : scalar value to muliply
-
-    @updates : matAPtr
-==================================================================}
-PUB scalarMultOp33(matPtr, k) | i
+PUB scalarMultOp(matPtr, k) | i
 
   repeat i from 0 to 9
     long[matPtr][i] *= k
 
 
-{==================================================================
-multOp33: 3by3 matrix multiplication
-
-    @matAPtr : matrix A
-    @matBPtr : matrix B
-    @matCPtr : result matrix C
-               C = A * B
-
-    @updates : matCPtr
-==================================================================}        
-PUB multOp33(matAPtr, matBPtr, matCPtr)| i,j, rowCheck, colCheck
+' 3x3 Matrix Operations
+PUB multOp(matAPtr, matBPtr, matCPtr)| i,j, rowCheck, colCheck
 
   rowCheck := 0
   colCheck := 0
@@ -124,48 +108,24 @@ PUB multOp33(matAPtr, matBPtr, matCPtr)| i,j, rowCheck, colCheck
       colCheck++  
     rowCheck+=3 
     colCheck :=0
-
-{==================================================================
-addOp33: 3by3 matrix addition
-
-    @matAPtr : matrix A
-    @matBPtr : matrix B
-    @matCPtr : result matrix C
-               C = A + B
-
-    @updates : matCPtr
-==================================================================} 
-PUB addOp33(matAPtr, matBPtr, matCPtr) | i
+            
+  return
+  
+PUB addOp(matAPtr, matBPtr, matCPtr) | i
 
   i := 0
   repeat i from 0 to 8
     long[matCPtr][i] := long[matAPtr][i] + long[matBPtr][i]
+  return
 
 
-{==================================================================
-subOp33: 3by3 matrix subtraction
-
-    @matAPtr : matrix A
-    @matBPtr : matrix B
-    @matCPtr : result matrix C
-               C = A - B
-
-    @updates : matCPtr
-==================================================================}             
-PUB subOp33(matAPtr, matBPtr, matCPtr) | i
+PUB subOp(matAPtr, matBPtr, matCPtr) | i
 
   i := 0
   repeat i from 0 to 8
     long[matCPtr][i] := long[matAPtr][i] - long[matBPtr][i]
+  return
 
-
-{==================================================================
-transposeOp: calculates transpose of 3by3 matrix
-
-   @matResultPtr: destination matrix
-   
-   @updates: matResultPtr
-==================================================================}
 PUB transposeOp(matAPtr, matResultPtr) | i, j,k
 
   i :=0
@@ -179,26 +139,11 @@ PUB transposeOp(matAPtr, matResultPtr) | i, j,k
       j++
       k :=0
 
-{==================================================================
-detOp: calculates determinant of 3by3 matrix
 
-   @matAPtr : array, size of 9 -> represents 3by3 matrix
-
-   @returns: determinant of matAPtr
-==================================================================}
 PUB detOp(matAPtr) : det
 
   det := long[matAPtr][0]*(long[matAPtr][4]*long[matAPtr][8]-long[matAPtr][7]*long[matAPtr][5])-long[matAPtr][1]*(long[matAPtr][3]*long[matAPtr][8]-long[matAPtr][6]*long[matAPtr][5]) + long[matAPtr][2]*(long[matAPtr][3]*long[matAPtr][7]-long[matAPtr][6]*long[matAPtr][4])
 
-{==================================================================
-invOp: calculates inverse of 3by3 matrix
-
-   @matAPtr : array, size of 9 -> represents 3by3 matrix
-   @matResultPtr: destination matrix
-   
-   @updates: matResultPtr
-   @returns: -1 only when no determinant exists   
-==================================================================}
 PUB invOp(matAPtr, matResultPtr)| det, i
 
   det := detOp(matAPtr)
@@ -224,26 +169,6 @@ PUB invOp(matAPtr, matResultPtr)| det, i
       long[matResultPtr][i] := (long[matResultPtr][i] - getAbs(det)/2) /det
 
 
-
-
-
-
-
-
-    
-'==============================================================================================================  
-'==============================================================================================================
-'==============================================================================================================
-'==============================================================================================================
-'==============================================================================================================  
-'==============================================================================================================
-'==============================================================================================================
-'==============================================================================================================
-'==============================================================================================================  
-'==============================================================================================================
-'==============================================================================================================
-'==============================================================================================================
-' DCM supporter function codes start from here
 
 { ================================================= 
   a2d : getting DCM from euler angles

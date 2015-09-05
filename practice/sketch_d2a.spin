@@ -61,29 +61,27 @@ d2a  : direction cosince matrix to angle
 @ad  : DCM pointer (in value*10_000), matlab convention of data representation
 @out : Euler angle pointers in degree*100
 }
-PUB d2a(ad,out) | counter
+PUB d2a(RPtr,outPtr) | counter
 
-  'convert value*10000 to rad*32768
+  'convert 10_000*value to rad*32768
   'origanl, destination, DCM factor, scale factor
-  copy(ad, @temp3x3, 10_000, 32768) 
+  copy(RPtr, @temp3x3, 10_000, 32768) 
 
 '  LONG[out][0] := -tr.asin(LONG[temp][2])                   ' p, roll, psi
 '  LONG[out][1] := tr.atan2(LONG[temp][8], LONG[temp][5]) ' q, pitch, theta
 '  LONG[out][2] := tr.atan2(LONG[temp][0], LONG[temp][1]) ' r, yaw, phi
 
                                                     
-  LONG[out][0] := -tr.asin(temp3x3[6])*2              ' q, pitch, theta
-  LONG[out][1] := tr.atan2(temp3x3[8], temp3x3[7]) ' p, roll, psi  
-  LONG[out][2] := tr.atan2(temp3x3[0], temp3x3[3]) ' r, yaw, phi   
+  LONG[outPtr][0] := -tr.asin(temp3x3[6]*2)           ' q, pitch, theta
+  LONG[outPtr][1] := tr.atan2(temp3x3[8], temp3x3[7]) ' p, roll, psi  
+  LONG[outPtr][2] := tr.atan2(temp3x3[0], temp3x3[3]) ' r, yaw, phi
 
+  
 PRI copy(oriPtr, desPtr, convention, scale) | counter
 
   repeat counter from 0 to 8
     long[desPtr][counter] := (long[oriPtr][counter] * scale + convention/2 ) / convention
 
-
-
-           
                
 PRI printDCM | iter, digit, counter
   
