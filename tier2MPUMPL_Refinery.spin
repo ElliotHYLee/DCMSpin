@@ -128,9 +128,9 @@ PUB run
   angVel[2] := gyro[2]' / 131  ' degree per second    
 
 
-  heading[0] := avgMag[0] '- 5     'magneto meter offset
-  heading[1] := avgMag[1] '- 42
-  heading[2] := avgMag[2] '+ 2
+  heading[0] := avgMag[0] - 20     'magneto meter offset
+  heading[1] := avgMag[1] - 25
+  heading[2] := avgMag[2] + 5
  
    
 PUB getAvgAcc | i, avgCoef
