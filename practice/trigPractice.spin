@@ -13,9 +13,8 @@ Var
 
 PUB main | flag
   flag :=0
-  a := 10000  'DCM radian = 10000*rad = 0.0169
-  a := a*65536/10000   ' input = radian * 65536
-  a := 9814
+
+  a := 32768
   fds.quickstart
 
   repeat while (flag==0)
@@ -23,7 +22,7 @@ PUB main | flag
     fds.str(string("intput = "))
     fds.dec(a)
     fds.str(string(" result = "))
-    fds.decLn(tr.asin(a))
+    fds.decLn(tr.atan(a))
     'a+=1
     'if a> 65555
     '  flag :=1

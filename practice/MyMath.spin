@@ -86,7 +86,7 @@ PUB detOp22(matPtr)
 
   return long[matPtr][0]*long[matPtr][3] - long[matPtr][1]*long[matPtr][2]
 
-
+{
 {==================================================================
 colOf33: choose a column of 3 by 3 matrix
 
@@ -101,6 +101,21 @@ PUB colOf33(matPtr33, col, desVec)
   long[desVec][1] := long[matPtr33][col-1 + 3]
   long[desVec][2] := long[matPtr33][col-1 + 6]
 
+PUB glueCol31(col1, col2, col3, desMat)
+
+  long[desMat][0] := long[col1][0]
+  long[desMat][1] := long[col2][0]
+  long[desMat][2] := long[col3][0]
+  
+  long[desMat][3] := long[col1][1]
+  long[desMat][4] := long[col2][1]
+  long[desMat][5] := long[col3][1]
+
+  long[desMat][6] := long[col1][2]
+  long[desMat][7] := long[col2][2]
+  long[desMat][8] := long[col3][2]
+
+}
 '==============================================================================================================  
 '==============================================================================================================
 '==============================================================================================================
@@ -222,7 +237,7 @@ PUB scalarDivOp33(matPtr, k) | i, sign
   sign := getSign(long[matPtr][i])*getSign(k)
   repeat i from 0 to 9
     sign := getSign(long[matPtr][i])*getSign(k)  
-    long[matPtr][i] := (long[matPtr][i] + sign*k/2) / k 
+    long[matPtr][i] := (long[matPtr][i] /k)'+ sign*k/2) / k <-faster
 
 {==================================================================
 multOp33: 3by3 matrix multiplication
@@ -349,10 +364,10 @@ PUB invOp(matAPtr, matResultPtr)| det, i
   long[matResultPtr][8] := long[matAPtr][0]*long[matAPtr][4]-long[matAPtr][1]*long[matAPtr][3]
 
   repeat i from 0 to 8 'rounding up for final result
-    if long[matResultPtr][i] > 0
-      long[matResultPtr][i] := (long[matResultPtr][i] + getAbs(det)/2) / det
-    else
-      long[matResultPtr][i] := (long[matResultPtr][i] - getAbs(det)/2) /det
+   ' if long[matResultPtr][i] > 0
+      long[matResultPtr][i] := (long[matResultPtr][i] /det)'+ getAbs(det)/2) / det
+    'else
+     ' long[matResultPtr][i] := (long[matResultPtr][i] - getAbs(det)/2) /det
 
     
 '==============================================================================================================  
@@ -371,14 +386,13 @@ PUB invOp(matAPtr, matResultPtr)| det, i
   
 PUB skew(Dptr, a, b, c)
 
-  long[Dptr][1] := a
+  long[Dptr][1] := -c
   long[Dptr][2] := b
-  long[Dptr][3] := -a
-  long[Dptr][5] := c
+  long[Dptr][3] := c
+  long[Dptr][5] := -a
   long[Dptr][6] := -b  
-  long[Dptr][7] := -c
+  long[Dptr][7] := a
 
-  
 { ================================================= 
   a2d : getting DCM from euler angles
   @Rptr in value * 10_000
@@ -460,18 +474,19 @@ PUB d2a(RPtr,outPtr) | counter
   LONG[outPtr][2] := tr.atan2(temp3x3[0], temp3x3[3]) ' r, yaw, phi
 
 
-PUB copy(oriPtr, desPtr) | counter
-
-  repeat counter from 0 to 8
-    long[desPtr][counter] := long[oriPtr][counter]
 
 PRI copy_scale(oriPtr, desPtr, convention, scale) | counter, reg
 
   repeat counter from 0 to 8
-    reg := long[oriPtr][counter]
-    long[desPtr][counter] := (reg * scale + getSign(reg)*convention/2 ) / convention
+    'reg := long[oriPtr][counter]
+    long[desPtr][counter] := (long[oriPtr][counter] * scale / convention)' + getSign(reg)*convention/2 ) / convention
 
 
+PUB copy(oriPtr, desPtr) | counter
+
+
+  repeat counter from 0 to 8
+    long[desPtr][counter] := long[oriPtr][counter]
 
 { ================================================= 
   acc2ang: calcualtes euler angle from accelerometer raw

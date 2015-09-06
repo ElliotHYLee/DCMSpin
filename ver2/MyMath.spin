@@ -386,12 +386,12 @@ PUB invOp(matAPtr, matResultPtr)| det, i
   
 PUB skew(Dptr, a, b, c)
 
-  long[Dptr][1] := a
+  long[Dptr][1] := -c
   long[Dptr][2] := b
-  long[Dptr][3] := -a
-  long[Dptr][5] := c
+  long[Dptr][3] := c
+  long[Dptr][5] := -a
   long[Dptr][6] := -b  
-  long[Dptr][7] := -c
+  long[Dptr][7] := a
 
 { ================================================= 
   a2d : getting DCM from euler angles
@@ -474,11 +474,6 @@ PUB d2a(RPtr,outPtr) | counter
   LONG[outPtr][2] := tr.atan2(temp3x3[0], temp3x3[3]) ' r, yaw, phi
 
 
-PUB copy(oriPtr, desPtr) | counter
-
-
-  repeat counter from 0 to 8
-    long[desPtr][counter] := long[oriPtr][counter]
 
 PRI copy_scale(oriPtr, desPtr, convention, scale) | counter, reg
 
@@ -487,6 +482,11 @@ PRI copy_scale(oriPtr, desPtr, convention, scale) | counter, reg
     long[desPtr][counter] := (long[oriPtr][counter] * scale / convention)' + getSign(reg)*convention/2 ) / convention
 
 
+PUB copy(oriPtr, desPtr) | counter
+
+
+  repeat counter from 0 to 8
+    long[desPtr][counter] := long[oriPtr][counter]
 
 { ================================================= 
   acc2ang: calcualtes euler angle from accelerometer raw

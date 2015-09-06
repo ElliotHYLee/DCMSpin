@@ -76,7 +76,7 @@ ASIN : calculate value to degree*100, centi degree
 @returns angle in degree*100
 =================================================== }
 PUB ASIN(ix):pivot | tem,ng,pivot_axis
-'Expects scaled value between +/- 16384 (-1 and 1). Output range limited to 0 to 90 degrees in degrees*100
+'Expects scaled value between +/- 65536 (-1 and 1). Output range limited to 0 to 90 degrees in degrees*100
 
 ng~
 

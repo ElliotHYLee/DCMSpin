@@ -1,7 +1,8 @@
-{
-Matrix representation follows Matlab's matrix repesentation
-
-}
+'===============================================================================
+'MyMath.Spin :Matrix representation follows Matlab's matrix repesentation
+'Made by : Elliot Lee
+'Date    : Sep/5/2015
+'===============================================================================
 
 CON
   _clkmode = xtal1 + pll16x                                                    
@@ -23,9 +24,9 @@ PUB main
 
   fds.quickStart
 
-  testAcc[0] := -15
-  testAcc[1] := -290
-  testAcc[2] := -9507
+  testAcc[0] := -1
+  testAcc[1] := 2
+  testAcc[2] := -3
   
   repeat
     
@@ -42,18 +43,6 @@ PUB sqrt(value)| x, i
 
   return x
 
-
-  
-PUB skew(Dptr, a, b, c)
-
-  long[Dptr][1] := a
-  long[Dptr][2] := b
-  long[Dptr][3] := -a
-  long[Dptr][5] := c
-  long[Dptr][6] := -b  
-  long[Dptr][7] := -c
-
-                                
 PUB getIdentityMatrix(EPtr) { 10^4 = unity to represent 1.xxxx}
 
   long[EPtr][0] := 10000
@@ -80,8 +69,149 @@ PUB getAbs(value)
     result := value
   else
     result := -value
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+' 2 by 2 matrix (vector) operations & special operations
+PUB detOp22(matPtr)
+
+  return long[matPtr][0]*long[matPtr][3] - long[matPtr][1]*long[matPtr][2]
+
+{
+{==================================================================
+colOf33: choose a column of 3 by 3 matrix
+
+    @matPtr33 : matrix A
+    @col : column number. starts from left and 1
+    
+    @updates : desVec
+==================================================================}
+PUB colOf33(matPtr33, col, desVec)
+
+  long[desVec][0] := long[matPtr33][col-1 + 0]
+  long[desVec][1] := long[matPtr33][col-1 + 3]
+  long[desVec][2] := long[matPtr33][col-1 + 6]
+
+PUB glueCol31(col1, col2, col3, desMat)
+
+  long[desMat][0] := long[col1][0]
+  long[desMat][1] := long[col2][0]
+  long[desMat][2] := long[col3][0]
+  
+  long[desMat][3] := long[col1][1]
+  long[desMat][4] := long[col2][1]
+  long[desMat][5] := long[col3][1]
+
+  long[desMat][6] := long[col1][2]
+  long[desMat][7] := long[col2][2]
+  long[desMat][8] := long[col3][2]
+
+}
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+' 3 by 1 matrix (vector) operations
 
 
+
+
+{==================================================================
+addOp31: 3by1 matrix addition
+
+    @matPtr1 : matrix A
+    @matPtr2 : matrix B
+    
+    @updates : matPtr3
+==================================================================}
+pub addOp31(matPtr1, matPtr2, matPtr3) | i
+  repeat i from 0 to 2
+    long[matPtr3][i] := long[matPtr1][i] + long[matPtr2][i]
+
+{==================================================================
+subOp31: 3by1 matrix subtraction
+
+    @matPtr1 : matrix A
+    @matPtr2 : matrix B
+    
+    @updates : matPtr3
+==================================================================}
+pub subOp31(matPtr1, matPtr2, matPtr3) | i
+  repeat i from 0 to 2
+    long[matPtr3][i] := long[matPtr1][i] - long[matPtr2][i]
+{==================================================================
+scalarMult31: 3by1 matrix multiplication of scalar
+
+    @matAPtr : matrix A
+    @k : scalar value to muliply
+
+    @updates : matAPtr
+==================================================================}
+pub scalarMult31(matPtr, k) | i
+  repeat i from 0 to 2
+    long[matPtr][i] *= k 
+
+{==================================================================
+dot31: 3by1 matrix dot product
+
+    @matPtr1 : matrix A
+    @matPtr2 : matrix B
+
+    @returns : answer = dot(A,B)
+==================================================================}
+pub dot31(matPtr1, matPtr2) | i , answer
+  answer := 0
+  repeat i from 0 to 2
+    answer += long[matPtr1][i]*long[matPtr2][i]
+
+  return answer
+
+{==================================================================
+cross31: 3by1 matrix cross product
+
+    @matPtr1 : matrix A
+    @matPtr2 : matrix B
+
+    @updates : matPtr3
+==================================================================}
+pub cross31(matPtr1, matPtr2, matPtr3) 
+
+
+  long[matPtr3][0] := long[matPtr1][1]*long[matPtr2][2] - long[matPtr1][2]*long[matPtr2][1]
+  long[matPtr3][1] := long[matPtr1][2]*long[matPtr2][0] - long[matPtr1][0]*long[matPtr2][2]
+  long[matPtr3][2] := long[matPtr1][0]*long[matPtr2][1] - long[matPtr1][1]*long[matPtr2][0]   
+                                                                                          
+  
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================  
+'==============================================================================================================
+'==============================================================================================================
+'==============================================================================================================
+'      3 by 3 matrix operations
 {==================================================================
 scalarMultOp33: 3by3 matrix multiplication of scalar
 
@@ -94,7 +224,20 @@ PUB scalarMultOp33(matPtr, k) | i
 
   repeat i from 0 to 9
     long[matPtr][i] *= k
+    
+{==================================================================
+scalarDivOp33: 3by3 matrix division of scalar
 
+    @matAPtr : matrix A
+    @k : scalar value to muliply
+
+    @updates : matAPtr
+==================================================================}
+PUB scalarDivOp33(matPtr, k) | i, sign
+  sign := getSign(long[matPtr][i])*getSign(k)
+  repeat i from 0 to 9
+    sign := getSign(long[matPtr][i])*getSign(k)  
+    long[matPtr][i] := (long[matPtr][i] /k)'+ sign*k/2) / k <-faster
 
 {==================================================================
 multOp33: 3by3 matrix multiplication
@@ -107,6 +250,9 @@ multOp33: 3by3 matrix multiplication
     @updates : matCPtr
 ==================================================================}        
 PUB multOp33(matAPtr, matBPtr, matCPtr)| i,j, rowCheck, colCheck
+
+  repeat i from 0 to 8
+    long[matCPtr][i] := 0
 
   rowCheck := 0
   colCheck := 0
@@ -186,7 +332,7 @@ detOp: calculates determinant of 3by3 matrix
 
    @returns: determinant of matAPtr
 ==================================================================}
-PUB detOp(matAPtr) : det
+PUB detOp33(matAPtr) : det
 
   det := long[matAPtr][0]*(long[matAPtr][4]*long[matAPtr][8]-long[matAPtr][7]*long[matAPtr][5])-long[matAPtr][1]*(long[matAPtr][3]*long[matAPtr][8]-long[matAPtr][6]*long[matAPtr][5]) + long[matAPtr][2]*(long[matAPtr][3]*long[matAPtr][7]-long[matAPtr][6]*long[matAPtr][4])
 
@@ -201,7 +347,7 @@ invOp: calculates inverse of 3by3 matrix
 ==================================================================}
 PUB invOp(matAPtr, matResultPtr)| det, i
 
-  det := detOp(matAPtr)
+  det := detOp33(matAPtr)
   if (det ==0)
     return -1
 
@@ -218,17 +364,10 @@ PUB invOp(matAPtr, matResultPtr)| det, i
   long[matResultPtr][8] := long[matAPtr][0]*long[matAPtr][4]-long[matAPtr][1]*long[matAPtr][3]
 
   repeat i from 0 to 8 'rounding up for final result
-    if long[matResultPtr][i] > 0
-      long[matResultPtr][i] := (long[matResultPtr][i] + getAbs(det)/2) / det
-    else
-      long[matResultPtr][i] := (long[matResultPtr][i] - getAbs(det)/2) /det
-
-
-
-
-
-
-
+   ' if long[matResultPtr][i] > 0
+      long[matResultPtr][i] := (long[matResultPtr][i] /det)'+ getAbs(det)/2) / det
+    'else
+     ' long[matResultPtr][i] := (long[matResultPtr][i] - getAbs(det)/2) /det
 
     
 '==============================================================================================================  
@@ -244,6 +383,15 @@ PUB invOp(matAPtr, matResultPtr)| det, i
 '==============================================================================================================
 '==============================================================================================================
 ' DCM supporter function codes start from here
+  
+PUB skew(Dptr, a, b, c)
+
+  long[Dptr][1] := -c
+  long[Dptr][2] := b
+  long[Dptr][3] := c
+  long[Dptr][5] := -a
+  long[Dptr][6] := -b  
+  long[Dptr][7] := a
 
 { ================================================= 
   a2d : getting DCM from euler angles
@@ -252,33 +400,49 @@ PUB invOp(matAPtr, matResultPtr)| det, i
 
   @updates Rptr in 10_000
 =================================================== }
-PUB a2d(RPtr, eulerPtr)| th, ph, ps, temp
+PUB a2d(RPtr, eulerPtr)| th, ph, ps, temp, reg1, reg2
 
   th := long[eulerPtr][0]
   ph := long[eulerPtr][1]
   ps := long[eulerPtr][2]
 
-                  
-  long[RPtr][0] := (conv(tr.cosine(th)) * conv(tr.cosine(ps))+CMNSACLE/2) / CMNSACLE 
 
-  temp := ((conv(tr.sine(ph))*conv(tr.sine(th)) +CMNSACLE/2)/10000 * conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+  reg1 := conv(tr.cosine(th)) * conv(tr.cosine(ps))                
+  long[RPtr][0] := (reg1 + getSign(reg1)*CMNSACLE/2) / CMNSACLE 
+
+  reg1 := conv(tr.sine(ph))*conv(tr.sine(th))
+  reg2 := (reg1 + getSign(reg1)*CMNSACLE/2)/CMNSACLE * conv( tr.cosine(ps))  
+  temp := (reg2+ getSign(reg2)*CMNSACLE/2 )/CMNSACLE
   long[RPtr][1] :=  temp - (conv(tr.cosine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
-  
-  temp := ((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/10000*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+
+
+  reg1 := conv(tr.cosine(ph))*conv(tr.sine(th))
+  reg2 := (reg1 + getSign(reg1)*CMNSACLE/2)/CMNSACLE*conv(tr.cosine(ps))
+  temp := (reg2 + getSign(reg2)*CMNSACLE/2)/CMNSACLE
   long[RPtr][2] :=  temp + (conv(tr.sine(ph))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
 
-  long[RPtr][3] := (conv(tr.cosine(th))*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
+  reg1 := conv(tr.cosine(th))*conv(tr.sine(ps))
+  long[RPtr][3] := (reg1+getSign(reg1)*CMNSACLE/2)/CMNSACLE
 
-  temp := ((conv(tr.sine(ph))*conv(tr.sine(th))+CMNSACLE/2)/CMNSACLE*conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
+
+  reg1 := conv(tr.sine(ph))*conv(tr.sine(th))
+  reg2 := (reg1 + getSign(reg1)*CMNSACLE/2)/CMNSACLE*conv(tr.sine(ps))
+  temp := (reg2 + getSign(reg2)*CMNSACLE/2)/CMNSACLE
   long[RPtr][4] := temp + (conv(tr.cosine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE   
 
-  temp :=((conv(tr.cosine(ph))*conv(tr.sine(th))+CMNSACLE/2)/CMNSACLE* conv(tr.sine(ps))+CMNSACLE/2)/CMNSACLE
-  long[RPtr][5] := temp - (conv(tr.sine(ph))*conv(tr.cosine(ps))+CMNSACLE/2)/CMNSACLE
+  reg1 := conv(tr.cosine(ph))*conv(tr.sine(th))
+  reg2 := (reg1 + getSign(reg1)*CMNSACLE/2)/CMNSACLE* conv(tr.sine(ps))
+  temp :=(reg2 + getSign(reg2)*CMNSACLE/2)/CMNSACLE
+  reg1 := conv(tr.sine(ph))*conv(tr.cosine(ps))
+  long[RPtr][5] := temp - (reg1+ getSign(reg1)*CMNSACLE/2)/CMNSACLE
 
   long[RPtr][6] := -conv(tr.sine(th))
-  long[RPtr][7] := (conv(tr.sine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/CMNSACLE
-  long[RPtr][8] := (conv(tr.cosine(ph))*conv(tr.cosine(th))+CMNSACLE/2)/CMNSACLE
 
+  reg1 := conv(tr.sine(ph))*conv(tr.cosine(th))
+  long[RPtr][7] := (reg1 + getSign(reg1)*CMNSACLE/2)/CMNSACLE
+
+  reg1 := conv(tr.cosine(ph))*conv(tr.cosine(th))
+  long[RPtr][8] := (reg1 + getSign(reg1)* CMNSACLE/2)/CMNSACLE
 { ================================================= 
   conv : convert 65536 to 10_000 
   @value: it is in 65536 : 1
@@ -298,7 +462,7 @@ PUB d2a(RPtr,outPtr) | counter
 
   'convert 10_000*value to rad*32768
   'origanl, destination, DCM factor, scale factor
-  copy(RPtr, @temp3x3, 10_000, 32768) 
+  copy_scale(RPtr, @temp3x3, 10_000, 32768) 
 
 '  LONG[out][0] := -tr.asin(LONG[temp][2])                   ' p, roll, psi
 '  LONG[out][1] := tr.atan2(LONG[temp][8], LONG[temp][5]) ' q, pitch, theta
@@ -309,13 +473,20 @@ PUB d2a(RPtr,outPtr) | counter
   LONG[outPtr][1] := tr.atan2(temp3x3[8], temp3x3[7]) ' p, roll, psi  
   LONG[outPtr][2] := tr.atan2(temp3x3[0], temp3x3[3]) ' r, yaw, phi
 
-  
-PRI copy(oriPtr, desPtr, convention, scale) | counter
+
+
+PRI copy_scale(oriPtr, desPtr, convention, scale) | counter, reg
 
   repeat counter from 0 to 8
-    long[desPtr][counter] := (long[oriPtr][counter] * scale + convention/2 ) / convention
+    'reg := long[oriPtr][counter]
+    long[desPtr][counter] := (long[oriPtr][counter] * scale / convention)' + getSign(reg)*convention/2 ) / convention
 
 
+PUB copy(oriPtr, desPtr) | counter
+
+
+  repeat counter from 0 to 8
+    long[desPtr][counter] := long[oriPtr][counter]
 
 { ================================================= 
   acc2ang: calcualtes euler angle from accelerometer raw
