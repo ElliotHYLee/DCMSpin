@@ -78,10 +78,10 @@ PUB playSensor 'see the structure when implementing autopilot
   setUpDCM
   
   repeat
-    dt := cnt - prev 
+    prev := cnt  
     run
-    prev := cnt   
-
+       
+    dt := cnt - prev
 PUB getIdentity
 
   math.getIdentityMatrix(@R)

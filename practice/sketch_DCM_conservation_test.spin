@@ -52,14 +52,14 @@ fds.quickStart
          
           fds.clear
           a2d(@DCM, @euler)
-         ' printEuler
-          'fds.newline
-          'printDCM
-          'fds.newline
+          printEuler
+          fds.newline
+          printDCM
+          fds.newline
           d2a(@DCM, @eOut) 
-          'printEuler2
+          printEuler2
 
-          'fds.newline
+          fds.newline
           
           error[0] := (euler[0] - eOut[0])'*100/euler[0]
           error[1] := (euler[1] - eOut[1])'*100/euler[1]
@@ -72,8 +72,6 @@ fds.quickStart
           if error[2] > maxE[2]
             maxE[2] := error[2]
 
-          printEuler
-          fds.newline
           printMaxError 
           
           if (error[0] > 100) OR (error[1] > 100) OR (error[2] > 100)
