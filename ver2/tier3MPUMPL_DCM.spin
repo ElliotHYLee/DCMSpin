@@ -29,26 +29,35 @@ Var
   long acc[3], gyro[3], mag[3], temperature   ' raw values
   long playID, runStack[128]                  ' cog variables
   long DCM[9], I[3], omega[3], eye[9]          ' DCM variables
-  long accSI[3]
   long euler[3], eulerInput[3]               ' Euler angles
   long avgAcc[3], prevAccX[20], prevAccY[20], prevAccZ[20], avgAccInter[3]
   long dtMPU, prevMPU, dtDCM, prevDCM             ' time variables
 
-  byte attIsUpdated
+  byte attIsUpdated, dcmIsUpdated
   
-  long dcmCalcID, dcmCalcStack[128]
-  long iterStopper, targetMatrix[9], firstDCM[9], firstMag[3], err_earth[3], err_body[3] 
+  long dcmCalcID, dcmCalcStack[256]
+  long iterStopper, targetMatrix[9],targetMatrix2[9], firstDCM[9], firstMag[3], global_matrix1[9]
+
+
+
+
+
+
 {
 main is only to run this file
 }  
 PUB main
 
+  dcmIsUpdated :=0
+  
   FDS.quickStart  
   
   turnOnMPU
   startDCMCalc
   
-  repeat
+repeat
+  if dcmIsUpdated >0
+    
     FDS.clear
     fds.newline
     printDt
@@ -75,7 +84,8 @@ PUB main
 
         
     printEulerOutput
-    fds.newline 
+    fds.newline
+    dcmIsUpdated := 0
     waitcnt(cnt+clkfreq/10)
 
 PUB turnOnMPU
@@ -265,13 +275,21 @@ calcDCM: updates eAngle
    step 3: orthogonalize
    temp 4: compensation
 =====================================================================}
-PUB calcDCM | il, temp1[9] 
+PUB calcDCM | err_earth[3]  
+
+  err_earth[0] :=0
+  err_earth[1] :=0
+  err_earth[2] :=0   
 
   DCMstep1 'R = R*(eye(3) + skew(omega(i,:))*dt(i));     
   DCMstep2
-  DCMstep3_4_5
+  DCMstep3_4(@err_earth)
+  DCMstep5_6(@err_earth)
+  DCMstep7
+  DCMstep8
   d2a
 
+  dcmIsUpdated := 1
 
 PRI DCMstep1 | il, temp1[9], temp2[9], temp3[9], temp4[9],temp5[9],  freq 
 
@@ -366,7 +384,7 @@ PRI DCMstep2  | il , temp1[9],  col1[3], col2[3], col3[3], err_orth, x_orth[3], 
 
 
 
-PUB DCMstep3_4_5  | il, acc_body[3], acc_earth[3], mag_earth[3], err_acc_earth[3], err_mag_earth[3], g[3], magSize[2] , first_mag_earth[3]
+PUB DCMstep3_4(err_earthPtr)  | il, acc_body[3], acc_earth[3], mag_earth[3], err_acc_earth[3], err_mag_earth[3], g[3], magSize[2] , norm_first_mag_earth[3], norm_mag_earth[3]
 
   'STEP 3  
   'Acc_earth(i,:) = R*Acc_body(i,:)';
@@ -374,64 +392,158 @@ PUB DCMstep3_4_5  | il, acc_body[3], acc_earth[3], mag_earth[3], err_acc_earth[3
   acc_body[1] := acc[1] * CMNSCALE /100 * 981  /16384
   acc_body[2] := acc[2] * CMNSCALE /100 * 981 /16384
 
-  acc_earth[0] := (DCM[0]*acc[0] + DCM[1]*acc[1] + DCM[2]*acc[2])/CMNSCALE
-  acc_earth[1] := (DCM[3]*acc[0] + DCM[4]*acc[1] + DCM[5]*acc[2])/CMNSCALE
-  acc_earth[2] := (DCM[6]*acc[0] + DCM[7]*acc[1] + DCM[8]*acc[2])/CMNSCALE  
+  acc_earth[0] := (DCM[0]*acc_body[0] + DCM[1]*acc_body[1] + DCM[2]*acc_body[2])/CMNSCALE
+  acc_earth[1] := (DCM[3]*acc_body[0] + DCM[4]*acc_body[1] + DCM[5]*acc_body[2])/CMNSCALE
+  acc_earth[2] := (DCM[6]*acc_body[0] + DCM[7]*acc_body[1] + DCM[8]*acc_body[2])/CMNSCALE  
 
   'Mag_earth(i,:) = R*Mag_body(i,:)';
   mag_earth[0] := (DCM[0]*mag[0] + DCM[1]*mag[1] + DCM[2]*mag[2])/CMNSCALE 
   mag_earth[1] := (DCM[3]*mag[0] + DCM[4]*mag[1] + DCM[5]*mag[2])/CMNSCALE 
-  mag_earth[2] := (DCM[6]*mag[0] + DCM[7]*mag[1] + DCM[8]*mag[2])/CMNSCALE 
-  
+  mag_earth[2] := 0 '(DCM[6]*mag[0] + DCM[7]*mag[1] + DCM[8]*mag[2])'/CMNSCALE 
+
+
   'STEP 4
   'err_acc_earth = cross(Acc_earth(i,:), [0 0 g]);  % z axis acc is positive
   g[0] := 0
   g[1] := 0
-  g[2] := -98100
-  err_acc_earth[0] := acc_earth[1]*g[2]/CMNSCALE - acc_earth[2]*g[1]/CMNSCALE
-  err_acc_earth[1] := acc_earth[2]*g[0]/CMNSCALE - acc_earth[0]*g[2]/CMNSCALE
-  err_acc_earth[2] := acc_earth[0]*g[1]/CMNSCALE - acc_earth[1]*g[0]/CMNSCALE  
+  g[2] := -98100                        
+  err_acc_earth[0] := acc_earth[1]*g[2] /CMNSCALE '- acc_earth[2]*g[1])/CMNSCALE
+  err_acc_earth[1] := -acc_earth[0]*g[2]/CMNSCALE   'acc_earth[2]*g[0]/CMNSCALE - acc_earth[0]*g[2]/CMNSCALE
+  err_acc_earth[2] := 0'acc_earth[0]*g[1]/CMNSCALE - acc_earth[1]*g[0]/CMNSCALE  
 
-{
-  'err_mag_earth = cross(Mag_earth(i,:),  Mag_earth(1,:));
-  magSize[0] := math.sqrt(mag_earth[0]*mag_earth[0] + mag_earth[1]*mag_earth[1] +mag_earth[2]*mag_earth[2])
-  mag_earth[0] := mag_earth[1] * CMNSCALE / magSize[0]
-  mag_earth[1] := mag_earth[2] * CMNSCALE / magSize[0]
-  mag_earth[2] := 0
+  'Mag_earth(i,:) = [Mag_earth(i,1) Mag_earth(i,2) 0] /norm(Mag_earth(i,:)); 
+  magSize[0] := math.sqrt(mag_earth[0]*mag_earth[0] + mag_earth[1]*mag_earth[1] )'+mag_earth[2]*mag_earth[2])
+  norm_mag_earth[0] := mag_earth[1] * CMNSCALE / magSize[0]
+  norm_mag_earth[1] := mag_earth[2] * CMNSCALE / magSize[0]
+  norm_mag_earth[2] := 0
 
-  first_mag_earth[0] := (DCM[0]*firstMag[0] + DCM[1]*firstMag[1] + DCM[2]*firstMag[2])
-  first_mag_earth[1] := (DCM[3]*firstMag[0] + DCM[4]*firstMag[1] + DCM[5]*firstMag[2])
-  first_mag_earth[2] := (DCM[6]*firstMag[0] + DCM[7]*firstMag[1] + DCM[8]*firstMag[2])                
-
-  magSize[1] := math.sqrt(first_mag_earth[0]*first_mag_earth[0]/CMNSCALE +first_mag_earth[1]*first_mag_earth[1]/CMNSCALE +first_mag_earth[2]*first_mag_earth[2]/CMNSCALE)
-  first_mag_earth[0] := first_mag_earth[0] * CMNSCALE / magSize[1]
-  first_mag_earth[1] := first_mag_earth[1] * CMNSCALE / magSize[1]
-  first_mag_earth[2] := first_mag_earth[2] * CMNSCALE / magSize[1] 
+  'err_mag_earth = cross(Mag_earth(i,:),  Mag_earth(1,:)); 
+  magSize[1] := math.sqrt(firstMag[0]*firstMag[0] +firstMag[1]*firstMag[1]) ' +first_mag_earth[2]*first_mag_earth[2]/CMNSCALE)
+  norm_first_mag_earth[0] := firstMag[0] * CMNSCALE / magSize[1]
+  norm_first_mag_earth[1] := firstMag[1] * CMNSCALE / magSize[1]
+  norm_first_mag_earth[2] := 0'first_mag[2] * CMNSCALE / magSize[1] 
   
-  err_mag_earth[0] := (mag_earth[1]*first_mag_earth[2] - mag_earth[2]*first_mag_earth[1])/CMNSCALE
-  err_mag_earth[1] := (mag_earth[2]*first_mag_earth[0] - mag_earth[0]*first_mag_earth[2])/CMNSCALE
-  err_mag_earth[2] := (mag_earth[0]*first_mag_earth[1] - mag_earth[1]*first_mag_earth[0])/CMNSCALE 
-}
+  err_mag_earth[0] := 0'(norm_mag_earth[1]*norm_first_mag_earth[2] - norm_mag_earth[2]*norm_first_mag_earth[1])/CMNSCALE
+  err_mag_earth[1] := 0'(norm_mag_earth[2]*norm_first_mag_earth[0] - norm_mag_earth[0]*norm_first_mag_earth[2])/CMNSCALE
+  err_mag_earth[2] := (norm_mag_earth[0]*norm_first_mag_earth[1] - norm_mag_earth[1]*norm_first_mag_earth[0])/CMNSCALE 
+
   
   'Err_earth(i,:) = err_acc_earth + err_mag_earth;
-  err_earth[0] := err_acc_earth[0]
-  err_earth[1] := err_acc_earth[1]
-  err_earth[2] := err_mag_earth[2]
+  long[err_earthPtr][0] := err_acc_earth[0]
+  long[err_earthPtr][1] := err_acc_earth[1]
+  long[err_earthPtr][2] := err_mag_earth[2]
+
+{
+  targetMatrix[0] := err_earth[0]
+  targetMatrix[3] := err_earth[1]
+  targetMatrix[6] := err_earth[2]
+
+  targetMatrix[1] := acc_earth[0]
+  targetMatrix[4] := acc_earth[1]
+  targetMatrix[7] := acc_earth[2]
+
+  targetMatrix[2] := err_acc_earth[0]
+  targetMatrix[5] := err_acc_earth[1]
+  targetMatrix[8] := err_acc_earth[2]  
+
+  targetMatrix2[0] := mag[0]
+  targetMatrix2[3] := mag[1]
+  targetMatrix2[6] := mag[2]
+
+  targetMatrix2[1] := mag_earth[0]
+  targetMatrix2[4] := mag_earth[1]
+  targetMatrix2[7] := mag_earth[2]
+
+  targetMatrix2[2] := err_mag_earth[0]
+  targetMatrix2[5] := err_mag_earth[1]
+  targetMatrix2[8] := err_mag_earth[2] 
+}
+
+PUB DCMstep5_6(err_earthPtr)  | il, DCMtrans[9], a,b,c , err_body[3], temp1[9]
+
+  a := long[err_earthPtr][0]
+  b := long[err_earthPtr][1]
+  c := long[err_earthPtr][2]
+
+  DCMTrans[0] := DCM[0]
+  DCMTrans[1] := DCM[3]
+  DCMTrans[2] := DCM[6]
+  DCMTrans[3] := DCM[1]
+  DCMTrans[4] := DCM[4]
+  DCMTrans[5] := DCM[7]
+  DCMTrans[6] := DCM[2]
+  DCMTrans[7] := DCM[5]
+  DCMTrans[8] := DCM[8]
+
+  'Err_body(i,:) = (R'*Err_earth(i,:)')';
+  'err_earth[3], err_body[3] 
+
+'  err_body[0] := (DCMTrans[0]*err_earth[0] + DCMTrans[1]*err_earth[1] + DCMTrans[2]*err_earth[2])/CMNSCALE
+'  err_body[1] := (DCMTrans[3]*err_earth[0] + DCMTrans[4]*err_earth[1] + DCMTrans[5]*err_earth[2])/CMNSCALE
+'  err_body[2] := (DCMTrans[6]*err_earth[0] + DCMTrans[7]*err_earth[1] + DCMTrans[8]*err_earth[2])/CMNSCALE  
+
+  err_body[0] := (DCMTrans[0]*a + DCMTrans[1]*b + DCMTrans[2]*c)/CMNSCALE
+  err_body[1] := (DCMTrans[3]*a + DCMTrans[4]*b + DCMTrans[5]*c)/CMNSCALE
+  err_body[2] := (DCMTrans[6]*a + DCMTrans[7]*b + DCMTrans[8]*c)/CMNSCALE  
 
 
-  targetMatrix[0] := acc_body[0]
-  targetMatrix[3] := acc_body[1]
-  targetMatrix[6] := acc_body[2]
+  global_matrix1[0] := 0  
+  global_matrix1[1] := -err_body[2]
+  global_matrix1[2] := err_body[1]
+  global_matrix1[3] := err_body[2]
+  global_matrix1[4] := 0
+'  temp1[5] := -err_body[0]
+ ' matrix1[6] := -err_body[1]
+ ' matrix1[7] := err_body[0]
+ ' matrix1[8] := 0
 
-  targetMatrix[1] := err_acc_earth[0]
-  targetMatrix[4] := err_acc_earth[1]
-  targetMatrix[7] := err_acc_earth[2]
 
-  targetMatrix[2] := err_mag_earth[0]
-  targetMatrix[5] := err_mag_earth[1]
-  targetMatrix[8] := err_mag_earth[2]  
+  targetMatrix[0] := a' err_earth[0]
+  targetMatrix[3] := b'err_earth[1]
+  targetMatrix[6] := c'err_earth[2]
 
- 
+  targetMatrix[1] := err_body[0]
+  targetMatrix[4] := err_body[1]
+  targetMatrix[7] := err_body[2]  
+
+
+  targetMatrix[2] := err_body[0]
+  targetMatrix[5] := err_body[1]
+  targetMatrix[8] := err_body[2] 
+  
+  repeat il from 0 to 8
+    targetmatrix2[il] := global_matrix1[il]     
+ {
+  freq := clkfreq / dtMPU
+  getEye
+  repeat il from 0 to 8
+    temp2[il] := temp1[il] / freq
+    temp3[il] := eye[il] + temp2[il]
+  
+  'math.multOp33(@DCM, @temp3, @temp4) ' result = temp3
+  
+  temp4[0] := DCM[0]*temp3[0]+DCM[1]*temp3[3]+DCM[2]*temp3[6]
+  temp4[1] := DCM[0]*temp3[1]+DCM[1]*temp3[4]+DCM[2]*temp3[7]
+  temp4[2] := DCM[0]*temp3[2]+DCM[1]*temp3[5]+DCM[2]*temp3[8] 
+  temp4[3] := DCM[3]*temp3[0]+DCM[4]*temp3[3]+DCM[5]*temp3[6]
+  temp4[4] := DCM[3]*temp3[1]+DCM[4]*temp3[4]+DCM[5]*temp3[7]
+  temp4[5] := DCM[3]*temp3[2]+DCM[4]*temp3[5]+DCM[5]*temp3[8]
+  temp4[6] := DCM[6]*temp3[0]+DCM[7]*temp3[3]+DCM[8]*temp3[6]
+  temp4[7] := DCM[6]*temp3[1]+DCM[7]*temp3[4]+DCM[8]*temp3[7]
+  temp4[8] := DCM[6]*temp3[2]+DCM[7]*temp3[5]+DCM[8]*temp3[8]
+  
+  
+  repeat il from 0 to 8
+    temp5[il] := temp4[il]/CMNSCALE   
+    DCM[il] := temp5[il]
+}
+
+PUB DCMstep7
+
+
+PUB DCMstep8
+
+
 
 PUB d2a | counter, temp1[9]
 
@@ -448,12 +560,12 @@ PUB d2a | counter, temp1[9]
   euler[2] := tr.atan2(temp1[0], temp1[3]) ' r, yaw, phi
 
 
-
 PRI copy_scale(oriPtr, desPtr, convention, scale) | counter, reg
 
   repeat counter from 0 to 8
     'reg := long[oriPtr][counter]
     long[desPtr][counter] := (long[oriPtr][counter] * scale / convention)' + getSign(reg)*convention/2 ) / convention
+
 
 
 '==============================================================================================================  
@@ -688,13 +800,30 @@ PRI printFirstMag
 
 PRI printTargetMatrix | iter, digit, counter
   
-  fds.str(String("targetMatrix "))
+  fds.str(String("targetMatrix1 "))
   fds.newline
   
   repeat iter from 0 to 8
     digit := getDigit(targetMatrix[iter])  
     counter := 0
     fds.dec(targetMatrix[iter])
+    repeat counter from 0 to (12-digit)
+      fds.str(String(" "))
+    if ((iter+1)//3 == 0)
+      fds.newline
+    else
+      fds.str(string(" "))  
+
+
+  fds.newline
+  fds.newline
+  fds.str(String("targetMatrix2 "))
+  fds.newline
+  
+  repeat iter from 0 to 8
+    digit := getDigit(targetMatrix2[iter])  
+    counter := 0
+    fds.dec(targetMatrix2[iter])
     repeat counter from 0 to (12-digit)
       fds.str(String(" "))
     if ((iter+1)//3 == 0)

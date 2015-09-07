@@ -42,12 +42,6 @@ PUB sqrt(value)| x, i
     x := (value/x + x) /2
 
   return x
-PUB getSign(value)
-
-  if value >= 0
-    result := 1
-  else
-    result := -1
 
 PUB getIdentityMatrix(EPtr) { 10^4 = unity to represent 1.xxxx}
 
@@ -63,6 +57,12 @@ PUB getIdentityMatrix(EPtr) { 10^4 = unity to represent 1.xxxx}
   long[EPtr][7] := 0
   long[EPtr][8] := 10000  
   
+PUB getSign(value)
+
+  if value >= 0
+    result := 1
+  else
+    result := -1
 
 PUB getAbs(value)
   if value > 0
