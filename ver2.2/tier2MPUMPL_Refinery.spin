@@ -39,7 +39,7 @@ PUB main
   startPlay
 
   repeat
-    fds.clear 
+    fds.clear
     if (flag ==1 AND(cnt > base1 + clkfreq/50))
       printAcc_GCS
       base1 := cnt
@@ -103,7 +103,8 @@ PUB startPlay
 PUB playSensor
   repeat
     prev := cnt  
-    run
+    runGyro
+
     dt := cnt - prev
                      
 PUB initSensor(scl, sda)
@@ -114,16 +115,16 @@ PUB setMpu(gyroSet, accSet)
   sensor.setMpu(gyroSet, accSet) 
 
 
-PUB run
+PUB runGyro
 
   sensor.reportData(@acc, @gyro,@mag, @temperature)
-           
-  getAvgMag
+  'sensor.getGyro(@gyro)
+  'getAvgMag
 
+{
+  'getAvgAcc
 
-  getAvgAcc
-
-  angVel[0] := gyro[0]' / 131  ' degree per second
+  'angVel[0] := gyro[0]' / 131  ' degree per second
   angVel[1] := gyro[1]' / 131  ' degree per second
   angVel[2] := gyro[2]' / 131  ' degree per second    
 
@@ -132,7 +133,7 @@ PUB run
   heading[1] := avgMag[1] - 25
   heading[2] := avgMag[2] + 5
  
-   
+}
 PUB getAvgAcc | i, avgCoef
 
   avgCoef:= 5
