@@ -13,7 +13,7 @@ VAR
 
 
   'MPU varaibles
-  long t3_acc[3], t3_gyro[3], t3_mag[3], t3_mpuIsUpdated, t3_dcmIsUpdated
+  long t3_acc[3], t3_gyro[3], t3_mag[3], t3_gyroIsUpdated, t3_dcmIsUpdated, t3_accMagIsUpdated
   long t3_mpuCogId, t3_mpuStack[128]
   long t3_dt_mpu, t3_prev_mpu, t3_freq_mpu
 
@@ -22,7 +22,7 @@ VAR
   long t3_dcm[9], t3_eye[9], t3_imdt[9], t3_imdt2[9], t3_imdt3[9]
   long t3_omega[3], t3_euler[3], t3_acc_body[3], t3_acc_earth[3], t3_mag_earth[3]
   long t3_err_acc_earth[3], t3_err_mag_earth[3], t3_err_body[3], t3_err_earth[3], t3_I[3],t3_intrmdtI[3]  
-  long t3_dt_dcm, t3_prev_dcm, t3_freq_dcm
+  long t3_dt_dcm, t3_prev_dcm, t3_freq_dcm, t3_prev_compensation
   
   'first values for dcm
   long t3_avgAcc[3], t3_prevAccX[20], t3_prevAccY[20], t3_prevAccZ[20],  t3_avgAccInter[3] 
@@ -49,10 +49,13 @@ PUB main
 
   fds.quickStart  
   
-  turnOnMPU
-  startDcm
+  masterKey_tier3
+ ' startDcm
+
+  'turnOnMPU
 
 
+  
   repeat
 
     t3_prev_fds := cnt
@@ -62,6 +65,8 @@ PUB main
     fds.newline
     fds.strln(String("----------------------------"))
     ' first values
+    printFirstMag
+    fds.newline
     printAvgAcc
     fds.newline 
     printFirstEulerInput
@@ -71,7 +76,7 @@ PUB main
     printFirstEulerOutput
     fds.strln(String("----------------------------")) 
     ' progressive values
-    printFirstMag  
+    printCurrentMag
     fds.newline  
     printAcc
     printOmega
@@ -88,46 +93,70 @@ PUB main
     t3_dt_fds := cnt - t3_prev_fds
 
 
-PUB getDcmStatus 
+PUB masterKey_tier3
 
-  result :=  t3_dcmIsUpdated
-  t3_dcmIsUpdated:=0
+  turnOnMPU
 
-PUB getEulerAngles(xPtr)
+  setUpDCM
+  
+  startMpu
 
-  long[xPtr][0] := t3_euler[0]
-  long[xPtr][1] := t3_euler[1]
-  long[xPtr][2] := t3_euler[2]  
+  startDCM  
 
-PUB getAcc(xPtr)
 
-  long[xPtr][0] := t3_acc[0]
-  long[xPtr][1] := t3_acc[1]
-  long[xPtr][2] := t3_acc[2]
+PUB turnOnMPU
 
-PUB getGyro(xPtr)
+  sensor.initSensor(15,14)
+  sensor.setMpu(%000_00_000, %000_00_000) '250 deg/s, 2g
 
-  long[xPtr][0] := t3_gyro[0]
-  long[xPtr][1] := t3_gyro[1]
-  long[xPtr][2] := t3_gyro[2]      
+PUB stopMpu
+  if t3_mpuCogId
+    cogstop(t3_mpuCogId ~ -1)
+    
+PUB startMpu
+  stopMpu
+  t3_mpuCogId := cognew(runMpu, @t3_mpuStack) + 1
 
-PUB getMag(xPtr)
+  
+PUB runMpu | goCompensation
 
-  long[xPtr][0] := t3_mag[0]
-  long[xPtr][1] := t3_mag[1]
-  long[xPtr][2] := t3_mag[2]      
+  goCompensation := 0
+
+  repeat
+    t3_prev_mpu := cnt
+    sensor.runGyro
+    sensor.getGyro(@t3_gyro)
+
+   goCompensation ++
+
+    if goCompensation => 9
+      sensor.runAccMag
+      sensor.getAcc(@t3_acc)
+      sensor.getHeading(@t3_mag)
+      t3_accMagIsUpdated := 1   ' for DCM cog
+      goCompensation := 0
+      
+    t3_gyroIsUpdated := 1  
+
+    t3_dt_mpu := cnt - t3_prev_mpu
+    
 
   
 PUB setUpDCM | counter
 
-  if t3_mpuIsupdated > 0
-    waitcnt(cnt + clkfreq*2)
 
   repeat 100
-    getAvgAcc
+    sensor.runAccMag  
+  sensor.getAcc(@t3_acc)  
+  sensor.getHeading(@t3_mag)
+  
   repeat counter from 0 to 2
-    'I[counter] := 0  
+    t3_avgAcc[counter] := t3_acc[counter]
+  
+  repeat counter from 0 to 2
+    t3_I[counter] := 0  
     t3_euler[counter] := 0
+
     t3_first_mag[counter] := t3_mag[counter]
 
   'math.acc2ang(@t3_avgAcc, @t3_first_euler_in)
@@ -149,7 +178,7 @@ PUB acc2ang | x, y, temp
 
   temp := t3_avgAcc[2] * t3_avgAcc[2]+t3_avgAcc[1] * t3_avgAcc[1]
   x := sqrt(temp)
-  y := t3_avgAcc[0] 
+  y := t3_acc[0] 
 
   t3_first_euler_in[0] := tr.atan2(x, y)  ' theta
   t3_first_euler_in[1] := tr.atan2(-t3_avgAcc[2], -t3_avgAcc[1])
@@ -170,32 +199,6 @@ PUB getSign(value)
   else
     result := -1
 
-    
-PUB getAvgAcc | counter, avgCoef, i
-
-  avgCoef:= 20
-
-  repeat counter from 0 to (avgCoef-2)
-    t3_prevAccX[counter] := t3_prevAccX[counter+1]
-    t3_prevAccY[counter] := t3_prevAccY[counter+1]
-    t3_prevAccZ[counter] := t3_prevAccZ[counter+1] 
-  t3_prevAccX[avgCoef-1] := t3_acc[0]
-  t3_prevAccY[avgCoef-1] := t3_acc[1]
-  t3_prevAccZ[avgCoef-1] := t3_acc[2]
-    
-  t3_avgAccInter[0] := 0
-  t3_avgAccInter[1] := 0
-  t3_avgAccInter[2] := 0
-    
-  repeat i from 0 to (avgCoef-1)
-    t3_avgAccInter[0] += t3_prevAccX[i]/avgCoef 
-    t3_avgAccInter[1] += t3_prevAccY[i]/avgCoef
-    t3_avgAccInter[2] += t3_prevAccZ[i]/avgCoef
-
-  t3_avgAcc[0] := t3_avgAccInter[0]
-  t3_avgAcc[1] := t3_avgAccInter[1]
-  t3_avgAcc[2] := t3_avgAccInter[2]
-     
 PUB getOmega |ki 
 
   ki := 1
@@ -238,28 +241,48 @@ PUB startDcm
   t3_dcmCogId := cognew(runDcm, @t3_dcmStack) + 1
 
 PUB runDcm
-  setUpDCM
+  
   repeat
-    if t3_mpuIsUpdated
+    if t3_gyroIsUpdated
       t3_prev_dcm := cnt   
+
+      'calculate DCM w/o compensation
       calcDcm
-      t3_mpuIsUpdated := 0
-      t3_dcmIsUpdated := 1
-      t3_dt_dcm := cnt - t3_prev_dcm
       
+      t3_prev_compensation := cnt
+
+      'compensate only when it is available
+      if t3_accMagIsUpdated
+        'calcCompensation
+        t3_accMagIsUpdated := 0
+       
+      d2a
+
+
+      t3_gyroIsUpdated := 0
+      t3_dcmIsUpdated := 1  ' to report to upper level object
+      t3_dt_dcm := cnt - t3_prev_dcm
+     ' t3_prev_dcm := cnt         uncomment this to measure synched frequency  of DCM w/o compensation
       
 PUB calcDcm
   
   dcmStep1
   dcmStep2
+
+PUB calcCompensation
+
   dcmStep3
   dcmStep4
   dcmStep5
   dcmStep6
   dcmStep7
   dcmStep8
-  
-  d2a
+
+
+'-----------------------------------------------------------
+'-----------------------------------------------------------
+'-----------------------------------------------------------
+'-----------------------------------------------------------
 
 PUB dcmStep1
 
@@ -349,7 +372,6 @@ PUB dcmStep2| il , temp1[9],  col1[3], col2[3], col3[3], err_orth, x_orth[3], y_
 
   'repeat t3_counter from 0 to 8
   '  t3_matrix_monitor2[t3_counter] := t3_dcm[t3_counter] -t3_matrix_monitor1[t3_counter] 
-
 PUB dcmStep3
 
   t3_acc_body[0] := t3_acc[0] * CMNSCALE /100 * 981 /16384
@@ -428,7 +450,7 @@ PUB dcmStep5 | DCMTrans[9]
 }  
 PUB dcmStep6 | kp
 
-  kp := 9000 'kp = 0.001
+  kp := 25000 'kp = 0.001
 
   'skew(Err_body(i,:))*kp
   t3_imdt[0] := 0
@@ -485,41 +507,6 @@ PUB dcmStep7
 PUB dcmStep8
    
   ' done in 'getOmega
-
-
-
-'-----------------------------------------------------------
-'-----------------------------------------------------------
-'-----------------------------------------------------------
-'-----------------------------------------------------------
-PUB turnOnMPU
-
-  sensor.initSensor(15,14)
-  sensor.setMpu(%000_00_000, %000_00_000) '250 deg/s, 2g
-  startMpu
-
-
-PUB stopMpu
-  if t3_mpuCogId
-    cogstop(t3_mpuCogId ~ -1)
-    
-PUB startMpu
-  stopMpu
-  t3_mpuCogId := cognew(runMpu, @t3_mpuStack) + 1
-
-PUB runMpu
-
-  repeat
-    t3_prev_mpu := cnt
-    sensor.run
-    sensor.getAcc(@t3_acc)
-    sensor.getGyro(@t3_gyro)
-    sensor.getHeading(@t3_mag)
-    t3_mpuIsUpdated := 1  
-    t3_dt_mpu := cnt - t3_prev_mpu
-    
-
-
 
 PUB freezResult | local_c
 
@@ -821,8 +808,19 @@ PRI printFirstMag
   fds.decln(t3_first_mag_d[2])
 
 
+PRI printCurrentMag
 
 
+
+  fds.strLn(String("Current Magnetometer "))
+  fds.str(String("magX = ")) 
+  fds.decln(t3_mag_d[0])
+
+  fds.str(String("magY = "))  
+  fds.decln(t3_mag_d[1])
+  
+  fds.str(String("magZ = ")) 
+  fds.decln(t3_mag_d[2])
   
 PUB skewOmegaAnomalyChecker
   t3_an_skew_omega := 0

@@ -21,12 +21,11 @@ Var
 
   'program variable
   byte compFilterType
-  long runStack[128], playID, displayStack[128]
+  long runStack[128], playID, displayStack[128],runStack2[128], playID2
 
   long before, elapse, base1, base2, base3, flag
 
-
-  long dt, prev
+  long dt, prev, dt2, prev2
   
 PUB main
 
@@ -37,7 +36,9 @@ PUB main
   setMpu(%000_00_000, %000_00_000) '250 deg/s, 2g
 
   startPlay
+  'startPlay2 ' acc & mag
 
+  
   repeat
     fds.clear
     if (flag ==1 AND(cnt > base1 + clkfreq/50))
@@ -99,12 +100,32 @@ PUB stopPlay
 PUB startPlay
  stopPlay
  playID := cognew(playSensor, @runStack) + 1
- 
-PUB playSensor
+{
+PUB stopPlay2
+  if playID
+    cogstop(playID2 ~ -1)
+    
+PUB startPlay2
+ stopPlay2
+ playID2 := cognew(playSensor2, @runStack2) + 1
+
+PUB playSensor2
+
+  repeat
+    prev2 := cnt
+    runAccMag
+    dt2 := cnt - prev2
+}
+    
+PUB playSensor | goComp
+  goComp := 0
   repeat
     prev := cnt  
     runGyro
-
+    goComp ++
+    if goComp => 9
+      runAccMag
+      goComp := 0
     dt := cnt - prev
                      
 PUB initSensor(scl, sda)
@@ -117,23 +138,32 @@ PUB setMpu(gyroSet, accSet)
 
 PUB runGyro
 
-  sensor.reportData(@acc, @gyro,@mag, @temperature)
-  'sensor.getGyro(@gyro)
-  'getAvgMag
-
-{
-  'getAvgAcc
-
-  'angVel[0] := gyro[0]' / 131  ' degree per second
+  'sensor.reportData(@acc, @gyro,@mag, @temperature)
+  sensor.getGyro(@gyro)
+  angVel[0] := gyro[0]' / 131  ' degree per second
   angVel[1] := gyro[1]' / 131  ' degree per second
   angVel[2] := gyro[2]' / 131  ' degree per second    
 
+  'getAvgMag
+  'getAvgAcc
 
-  heading[0] := avgMag[0] - 20     'magneto meter offset
-  heading[1] := avgMag[1] - 25
-  heading[2] := avgMag[2] + 5
- 
-}
+'  heading[0] := avgMag[0] - 20     'magneto meter offset
+'  heading[1] := avgMag[1] - 25
+'  heading[2] := avgMag[2] + 5
+
+PUB runAcc
+  sensor.getAcc(@acc)  
+
+  getAvgAcc
+
+PUB runAccMag
+
+  sensor.getAcc(@acc)  
+  sensor.getMag(@mag)
+
+  getAvgAcc
+  getAvgMag
+
 PUB getAvgAcc | i, avgCoef
 
   avgCoef:= 5
@@ -180,7 +210,11 @@ PUB getAvgMag | i, avgCoef
     avgMag[1] += prevMagY[i]/avgCoef
     avgMag[2] += prevMagZ[i]/avgCoef    
 
+  heading[0] := avgMag[0] - 20     'magneto meter offset
+  heading[1] := avgMag[1] - 25
+  heading[2] := avgMag[2] + 5
 
+  
 PUB getTemperautre(dataPtr)
   Long[dataPtr] := temperature
         
@@ -228,13 +262,21 @@ PRI printDt
 
   fds.str(String("dt = "))
   fds.decLn(dt)
-
-
   fds.str(String("freq = "))
   fds.dec(80_000_000/dt)
   fds.strLn(String(" Hz"))
 
+  fds.newline
+  fds.newline
 
+  fds.str(String("dt2 = "))
+  fds.decLn(dt2)
+  fds.str(String("freq2 = "))
+  fds.dec(80_000_000/dt2)
+  fds.strLn(String(" Hz"))  
+
+
+  
 PRI printAll_GCS
 
   printAcc_GCS
