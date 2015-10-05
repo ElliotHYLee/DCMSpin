@@ -8,7 +8,7 @@ OBJ
   sensor : "Tier2MPUMPL_Refinery.spin"
   fds    : "FullDuplexSerial.spin"
   tr     : "TRIG"
-  math   : "MyMath"
+  'math   : "MyMath"
 VAR
 
 
